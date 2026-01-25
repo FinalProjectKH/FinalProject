@@ -1,3 +1,5 @@
+import {NavLink} from "react-router-dom";
+
 import {
   Clock3,
   FileCheck2,
@@ -18,14 +20,14 @@ const Sidebar = () => {
       <div className="relative h-full flex flex-col">
         {/* logo */}
         <div className="h-[96px] flex items-center pl-[35px]">
-          <a href="">
+          <NavLink to="/">
           <div className="h-[60px] w-[60px] bg-[url('/image/logo.png')] bg-contain bg-center bg-no-repeat" />
-          </a>
+          </NavLink>
         </div>
 
         {/* menu */}
         <nav className="mt-2 px-5 space-y-1">
-          <MenuItem icon={<Clock3 size={20} />} label="근태관리" />
+          <MenuItem to = "/attendance" icon={<Clock3 size={20}  />} label="근태관리" />
           <MenuItem icon={<FileCheck2 size={20} />} label="전자결재" />
           <MenuItem icon={<CalendarDays size={20} />} label="캘린더" />
           <MenuItem icon={<Mail size={20} />} label="메신저" badge={2} />
@@ -47,8 +49,9 @@ const Sidebar = () => {
 /* =========================
    Menu Item (hover only)
    ========================= */
-const MenuItem = ({ icon, label, badge }) => (
-  <button
+const MenuItem = ({to, icon, label, badge }) => (
+  <NavLink
+    to={to}
     className="
       group w-full relative flex items-center gap-3
       px-3 py-3 rounded-xl text-left
@@ -83,7 +86,7 @@ const MenuItem = ({ icon, label, badge }) => (
         {badge}
       </span>
     )}
-  </button>
+  </NavLink>
 );
 
 export default Sidebar;
