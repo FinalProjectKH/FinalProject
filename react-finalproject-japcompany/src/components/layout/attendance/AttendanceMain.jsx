@@ -22,6 +22,8 @@ const AttendanceMain = () => {
 
       {/* 아래 카드 (다음 단계) */}
       <AttendanceWeeklyList />
+
+      
     </section>
   );
 };

@@ -36,7 +36,7 @@ const RightSidebar = ({
 
   return (
     <aside
-      className="fixed right-6 top-1/2 -translate-y-1/2 mt-8"
+      className="absolute right-6 top-1/2 -translate-y-1/2 mt-8"
       style={{ width, height }}
       aria-label="근태 관리 사이드바"
     >

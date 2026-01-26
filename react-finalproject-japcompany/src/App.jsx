@@ -18,6 +18,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<MainLayout />} />
         <Route path = "/attendance" element={<AttendanceLayout/>} ></Route>
+        <Route path = "/calendar" element={<MyCalendar/>} ></Route>
       </Routes>
     </BrowserRouter>
 
