@@ -1,6 +1,3 @@
-import logo from "../assets/logo.jpg";
-
-
 const LoginPage = () => {
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#f3f3f3]">
@@ -27,7 +24,7 @@ const LoginPage = () => {
             <div className="pointer-events-none absolute inset-0 rounded-[26px] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]" />
 
             {/* logo (placeholder) */}
-            <img src="{logo}" className="h-[99px] w-[99px]" />
+            <img src="/image/logo_02.png" className="h-[99px] w-[99px]" />
 
             {/* title */}
             <h1 className="relative text-[40px] lg:text-[44px] tracking-[2px] font-medium mb-[28px] lg:mb-[34px] text-black">

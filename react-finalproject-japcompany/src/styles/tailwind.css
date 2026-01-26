@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 전사 공통 스타일 */
+@layer base {
+  body {
+    @apply bg-[#f5f2ef] text-[#2a1a14];
+    font-family: 'Pretendard', system-ui, sans-serif;
+  }
+}
+
+/* 공통 컴포넌트 */
+@layer components {
+  .glass {
+    @apply bg-white/40 backdrop-blur-xl shadow-xl;
+  }
+}
