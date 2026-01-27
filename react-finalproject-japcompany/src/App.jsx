@@ -1,28 +1,42 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import MyCalendar from "./pages/Calendar";
 import MainLayout from "./components/layout/MainLayout";
 import AttendanceLayout from "./components/layout/attendance/AttendanceLayout";
 import LoginPage from "./pages/LoginPage";
+import ProtectedRoute from "./routes/ProtectedRoute";
 
 const App = () => {
   return (
-    <>
-    {/* <LoginPage /> */}
+    <Routes>
+      {/* 로그인 */}
+      <Route path="/" element={<LoginPage />} />
 
-    {/* <MainLayout /> */}
-
-    {/* <AttendanceLayout /> */}
-    {/* <MyCalendar /> */}
-
-    
-      <Routes>
-        <Route path="/" element={<MainLayout />} />
-        <Route path = "/attendance" element={<AttendanceLayout/>} ></Route>
-        <Route path = "/calendar" element={<MyCalendar/>} ></Route>
-      </Routes>
-    
-
-    </>
+      {/* 로그인 후 */}
+      <Route
+        path="/main"
+        element={
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/attendance"
+        element={
+          <ProtectedRoute>
+            <AttendanceLayout />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/calendar"
+        element={
+          <ProtectedRoute>
+            <MyCalendar />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 };
 

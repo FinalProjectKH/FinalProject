@@ -20,7 +20,7 @@ const Sidebar = () => {
       <div className="relative h-full flex flex-col">
         {/* logo */}
         <div className="h-[96px] flex items-center pl-[35px]">
-          <NavLink to="/">
+          <NavLink to="/main">
           <div className="h-[60px] w-[60px] bg-[url('/image/logo.png')] bg-contain bg-center bg-no-repeat" />
           </NavLink>
         </div>

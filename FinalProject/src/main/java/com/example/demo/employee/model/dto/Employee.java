@@ -11,17 +11,17 @@ import lombok.NoArgsConstructor;
 @Builder
 public class Employee {
 	
-	private String epmNo;
-	private String epmName;
-	private String epmId;
-	private String epmPw;
+	private String empNo;
+	private String empName;
+	private String empId;
+	private String empPw;
 	private String deptCode;
 	private String positionCode;
-	private String epmEmail;
-	private String epmNickname;
-	private String epmPhone;
+	private String empEmail;
+	private String empNickname;
+	private String empPhone;
 	private String enrollDate;
-	private String epmDelFl;
+	private String empDelFl;
 	private String introduction;
 	private String profileImg;
 

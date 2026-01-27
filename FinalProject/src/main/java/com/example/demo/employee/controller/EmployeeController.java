@@ -11,25 +11,28 @@ import org.springframework.web.bind.annotation.SessionAttributes;
 import com.example.demo.employee.model.dto.Employee;
 import com.example.demo.employee.model.service.EmployeeService;
 
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 @RequestMapping("employee")
 @RequiredArgsConstructor
-@SessionAttributes({"loginMember"})
+//@SessionAttributes({"loginMember"})
 public class EmployeeController {
 	
 	private final EmployeeService service;
 	
 	@PostMapping("login")
-	public Employee login(@RequestBody Employee inputMember, Model model) {
+	public Employee login(@RequestBody Employee inputMember, Model model, HttpSession session) {
 		
 		Employee loginMember = service.login(inputMember);
 		
 		if(loginMember == null) return null;
 		
-		model.addAttribute("loginMember", loginMember);
+		// Model 대신 HttpSession에 직접 저장
+        session.setAttribute("loginMember", loginMember);
+        
 		return loginMember;
 		
 	}

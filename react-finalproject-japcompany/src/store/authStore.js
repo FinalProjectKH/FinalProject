@@ -19,10 +19,10 @@ export const useAuthStore = create(
       /* ====== Actions ====== */
 
       // 로그인
-      login: async (email, password) => {
+      login: async (empId, empPw) => {
         const response = await axiosApi.post("/employee/login", {
-          memberEmail: email,
-          memberPw: password,
+          empId: empId,
+          empPw: empPw,
         });
 
         const employeeInfo = response.data;
