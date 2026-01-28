@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { ProfileModal } from "../modal";
 import { Search } from "lucide-react";
+import { useAuthStore } from "../../store/authStore";
 
 const Header = () => {
   const [openProfile, setOpenProfile] = useState(false);
+
+  const user = useAuthStore((state) => state.user );
 
   return (
     <header className="relative h-[92px] flex items-center justify-between">
@@ -27,7 +30,9 @@ const Header = () => {
           className="flex items-center gap-3 rounded-full px-3 py-2 hover:bg-black/5 transition"
           onClick={() => setOpenProfile((v) => !v)}
         >
-          <span className="text-sm text-black/70">홍길동</span>
+          <span className="text-sm text-black/70 font-medium" >
+          {user ? user.empNickname : "로그인 필요"}
+          </span>
           <div className="w-10 h-10 rounded-full bg-gray-400 shadow-[0_14px_30px_rgba(0,0,0,0.18)]" />
         </button>
 
