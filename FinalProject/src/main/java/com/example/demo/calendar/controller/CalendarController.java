@@ -45,7 +45,7 @@ public class CalendarController {
 
 
     // ==========================================
-    // 2. 카테고리(Category) - 🚨 여기 수정됨!
+    // 2. 카테고리(Category) 
     // ==========================================
     
     // [GET] 카테고리 조회
@@ -54,7 +54,7 @@ public class CalendarController {
         return calendarService.findAllCategories();
     }
 
-    // [POST] 카테고리 추가 (String 반환하는 거 지움!)
+    // [POST] 카테고리 추가
     @PostMapping("/categories")
     public CalendarCategoryDto createCategory(@RequestBody CalendarCategoryDto dto) {
         return calendarService.createCategory(dto);

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("");     // 아이디(또는 이메일)
+  const [id, setId] = useState("");     // 아이디(또는 이메일)
   const [password, setPassword] = useState(""); // 비밀번호
   const [loading, setLoading] = useState(false);
 
@@ -16,7 +16,7 @@ const LoginPage = () => {
 
     try {
       setLoading(true);
-      await login(email, password);   // ✅ /employee/login 호출 (authStore.js)
+      await login(id, password);   // ✅ /employee/login 호출 (authStore.js)
       navigate("/main", { replace: true });
     } catch {
       alert("아이디 또는 비밀번호가 올바르지 않습니다.");
@@ -65,8 +65,8 @@ const LoginPage = () => {
             <input
               type="text"
               placeholder="아이디"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={id}
+              onChange={(e) => setId(e.target.value)}
               autoComplete="username"
               className="
                 h-[62px]
