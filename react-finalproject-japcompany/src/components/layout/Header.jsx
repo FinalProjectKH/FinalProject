@@ -32,6 +32,11 @@ const Header = () => {
         >
           <span className="text-sm text-black/70 font-medium" >
           {user ? user.empNickname : "로그인 필요"}
+          {user?.positionName && (
+            <span className="ml-1 text-xs text-black/40 font-normal">
+              {user.positionName}
+            </span>
+          )}
           </span>
           <div className="w-10 h-10 rounded-full bg-gray-400 shadow-[0_14px_30px_rgba(0,0,0,0.18)]" />
         </button>
