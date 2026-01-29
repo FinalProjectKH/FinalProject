@@ -1,9 +1,10 @@
 package com.example.demo.employee.model.service;
 
 import com.example.demo.employee.model.dto.Employee;
+import com.example.demo.employee.model.dto.LoginMemberDTO;
 
 public interface EmployeeService {
 
-	Employee login(Employee inputMember);
+	LoginMemberDTO login(Employee inputMember);
 
 }

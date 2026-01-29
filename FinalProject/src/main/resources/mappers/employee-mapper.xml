@@ -3,9 +3,9 @@
 <mapper namespace="com.example.demo.employee.model.mapper.EmployeeMapper">
 <!--namespace에 연결할 경로 Mapper 풀네임 작성-->
 	
-	<!-- 로그인 -->
+   <!--로그인 
    <select id="login" resultType="com.example.demo.employee.model.dto.Employee">
-   		SELECT EMP_NO, EMP_ID, EMP_PW, 
+   		SELECT EMP_NO, EMP_NAME, EMP_ID, EMP_PW, 
 		EMP_NICKNAME, EMP_PHONE, 
 		PROFILE_IMG,
 		TO_CHAR(ENROLL_DATE, 
@@ -14,6 +14,35 @@
 		FROM "EMPLOYEE" 
 		WHERE EMP_ID = #{empId}
 		AND EMP_DEL_FL = 'N'
+   </select>-->
+   
+   <select id="login" parameterType="com.example.demo.employee.model.dto.Employee"
+   resultType="com.example.demo.employee.model.dto.LoginMemberDTO">
+		SELECT
+		E.EMP_NO,
+		E.EMP_NAME,
+		E.EMP_ID,
+		E.EMP_PW,
+		E.DEPT_CODE,
+		E.POSITION_CODE,
+		E.EMP_EMAIL,
+		E.EMP_NICKNAME,
+		E.EMP_PHONE,
+		TO_CHAR(E.ENROLL_DATE, 'YYYY-MM-DD') AS ENROLL_DATE,
+		E.EMP_DEL_FL,
+		E.INTRODUCTION,
+		E.PROFILE_IMG,
+		P.POSITION_NAME,
+		P.AUTHORITY_LEVEL,
+		D.DEPT_NAME,
+		D.PARENT_DEPT_CODE
+		FROM EMPLOYEE E
+		JOIN POSITION P
+		ON E.POSITION_CODE = P.POSITION_CODE
+		LEFT JOIN DEPARTMENT D
+		ON E.DEPT_CODE = D.DEPT_CODE
+		WHERE E.EMP_ID = #{empId}
+		AND E.EMP_DEL_FL = 'N'
    </select>
    
 </mapper>

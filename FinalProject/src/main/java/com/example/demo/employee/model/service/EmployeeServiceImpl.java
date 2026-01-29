@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.employee.model.dto.Employee;
+import com.example.demo.employee.model.dto.LoginMemberDTO;
 import com.example.demo.employee.model.mapper.EmployeeMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -21,12 +22,12 @@ public class EmployeeServiceImpl implements EmployeeService {
 	private final BCryptPasswordEncoder bcrypt;
 	
 	@Override
-	public Employee login(Employee inputMember) {
+	public LoginMemberDTO login(Employee inputMember) {
 		
 		log.info("입력 empId = " + inputMember.getEmpId());
 		log.info("입력 empPw = " + inputMember.getEmpPw());
 
-		Employee loginMember = mapper.login(inputMember.getEmpId());
+		LoginMemberDTO loginMember = mapper.login(inputMember.getEmpId());
 		
 		if (loginMember == null) {
 			  System.out.println("loginMember == null (empId=" + inputMember.getEmpId() + ")");
