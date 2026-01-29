@@ -5,11 +5,12 @@ import org.apache.ibatis.annotations.Param;
 import org.mybatis.spring.annotation.MapperScan;
 
 import com.example.demo.employee.model.dto.Employee;
+import com.example.demo.employee.model.dto.LoginMemberDTO;
 
 @Mapper
 public interface EmployeeMapper {
 
-	Employee login(@Param("empId") String empId);
+	LoginMemberDTO login(@Param("empId") String empId);
 	
 	
 }

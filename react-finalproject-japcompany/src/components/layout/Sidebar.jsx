@@ -1,5 +1,5 @@
 import {NavLink} from "react-router-dom";
-
+import { useState } from "react";
 import {
   Clock3,
   FileCheck2,
@@ -10,7 +10,11 @@ import {
 } from "lucide-react";
 
 const Sidebar = () => {
+  const [orgOpen, setOrgOpen] = useState(false);
+  const [orgPos, setOrgPos] = useState({ x: 250, y: 200 });
+
   return (
+  <>
     <aside className="fixed left-0 top-0 h-screen w-[240px] text-white">
       {/* background */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#2d160f] via-[#3a1f14] to-[#6a402b]" />
@@ -30,7 +34,7 @@ const Sidebar = () => {
           <MenuItem to = "/attendance" icon={<Clock3 size={20}  />} label="근태관리" />
           <MenuItem icon={<FileCheck2 size={20} />} label="전자결재" />
           <MenuItem to = "/calendar" icon={<CalendarDays size={20} />} label="캘린더" />
-          <MenuItem icon={<Mail size={20} />} label="메신저" badge={2} />
+          <MenuItem icon={<Mail size={20} />} label="메신저" badge={3} onClick={() => setOrgOpen(true)}/>
           <MenuItem icon={<MessageSquareText size={20} />} label="게시판" />
         </nav>
 
@@ -43,21 +47,71 @@ const Sidebar = () => {
         </div>
       </div>
     </aside>
+
+
+{orgOpen && (
+  <div className="fixed inset-0 z-50 pointer-events-none">
+    <div
+      className="fixed w-[420px] h-[520px] rounded-xl bg-white text-black p-4 shadow-xl pointer-events-auto"
+      style={{ left: orgPos.x, top: orgPos.y }}
+    >
+      {/* 드래그 핸들 */}
+      <div
+        className="flex justify-between items-center mb-3 cursor-move select-none"
+        onMouseDown={(e) => {
+          const startX = e.clientX;
+          const startY = e.clientY;
+          const { x, y } = orgPos;
+
+          const onMove = (ev) => {
+            setOrgPos({
+              x: x + (ev.clientX - startX),
+              y: y + (ev.clientY - startY),
+            });
+          };
+
+          const onUp = () => {
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", onUp);
+          };
+
+          window.addEventListener("mousemove", onMove);
+          window.addEventListener("mouseup", onUp);
+        }}
+      >
+        <h2 className="font-bold">조직도 (임시)</h2>
+        <button onClick={() => setOrgOpen(false)}>✕</button>
+      </div>
+
+      <div className="h-[460px] overflow-y-auto text-sm text-gray-700">
+        여기 나중에 조직도 들어감
+      </div>
+    </div>
+  </div>
+)}
+
+
+    </> 
   );
 };
 
 /* =========================
    Menu Item (hover only)
    ========================= */
-const MenuItem = ({to, icon, label, badge }) => (
-  <NavLink
-    to={to}
-    className="
+const MenuItem = ({to, icon, label, badge, onClick }) => {
+  const Component = to ? NavLink : "button";
+
+  return (
+    <Component
+      {...(to ? { to } : { type: "button" })}
+      onClick={onClick}
+      className="
       group w-full relative flex items-center gap-3
       px-3 py-3 rounded-xl text-left
       transition
     "
-  >
+    >
+
     {/* hover overlay */}
     <span className="pointer-events-none absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
       {/* glass base */}
@@ -86,7 +140,9 @@ const MenuItem = ({to, icon, label, badge }) => (
         {badge}
       </span>
     )}
-  </NavLink>
-);
+    </Component>
+
+  );
+};
 
 export default Sidebar;
