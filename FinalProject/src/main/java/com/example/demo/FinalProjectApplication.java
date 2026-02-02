@@ -7,7 +7,8 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfi
 import org.springframework.context.annotation.PropertySource;
 
 
-@MapperScan("com.example.demo.employee.model.mapper")
+@MapperScan({"com.example.demo.employee.model.mapper",
+			 "com.example.demo.org.model.mapper"})
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
 @PropertySource("classpath:config.properties")
 public class FinalProjectApplication {
