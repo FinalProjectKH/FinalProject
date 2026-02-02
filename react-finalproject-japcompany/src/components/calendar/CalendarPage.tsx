@@ -3,23 +3,36 @@ import Calendar from '@toast-ui/calendar';
 import '@toast-ui/calendar/dist/toastui-calendar.min.css';
 import axios from 'axios';
 
-// 🧩 부품들 가져오기 (같은 폴더에 위치)
+// 🧩 부품들 가져오기
 import CalendarSidebar from './CalendarSidebar';
 import CalendarHeader from './CalendarHeader';
 import EventModal from './EventModal';
 import { CalendarCategory, ModalState } from './types';
 
 // =================================================================
-// 1. 설정 및 상수
+// 0. 설정 및 상수
 // =================================================================
-const MY_AUTH_LEVEL = 2; // 내 권한 (1:사원, 2:팀장, 3:관리자)
 const API_BASE_URL = "http://localhost/api/calendar";
 const CATEGORY_API_URL = "http://localhost/api/calendar/categories";
+
+// 🔥 [추가] 회의실 목록 정의 (나중에 DB에서 가져오도록 바꿀 수도 있음)
+const MEETING_ROOMS = [
+  "KH ACADEMY 5층 본관", 
+  "KH ACADEMY 3층 301호", 
+  "KH ACADEMY 3층 302호", 
+  "임원 회의실", 
+  "화상 회의실"
+];
 
 export default function CalendarPage() {
   // 📍 [Ref] DOM 요소 및 캘린더 인스턴스 연결
   const containerRef = useRef<HTMLDivElement>(null);
   const calendarInstance = useRef<Calendar | null>(null);
+
+  // 📍 [Auth] 로그인 정보
+  const myEmpNo = localStorage.getItem("loginEmpNo") || "";
+  const myAuthLevel = parseInt(localStorage.getItem("authorityLevel") || "1");
+  const myDeptCode = localStorage.getItem("loginDeptCode") || "HR01";
 
   // 📍 [State] 데이터 상태 관리
   const [currentDate, setCurrentDate] = useState<string>('');
@@ -29,12 +42,20 @@ export default function CalendarPage() {
   // 📍 [State] 모달(팝업) 상태 관리
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalValues, setModalValues] = useState<ModalState>({
+    id: '', 
     title: '', body: '', start: new Date(), end: new Date(),
-    calendarId: '', type: '회의', location: '', isAllday: false, isPrivate: false,
+    calendarId: '', type: '1', location: '', isAllday: false, isPrivate: false,
   });
 
+  // [추가] 최신 카테고리 목록을 담아둘 Ref 바구니
+  const calendarsRef = useRef<CalendarCategory[]>([]);
+
+  useEffect(() => {
+    calendarsRef.current = calendars;
+  }, [calendars]);
+
   // =================================================================
-  // 2. 초기화 (useEffect)
+  // 1. 초기화 (useEffect)
   // =================================================================
   useEffect(() => {
     if (!containerRef.current) return;
@@ -42,7 +63,7 @@ export default function CalendarPage() {
     // (1) 캘린더 인스턴스 생성
     calendarInstance.current = new Calendar(containerRef.current, {
       defaultView: 'month',
-      useFormPopup: false, // 기본 팝업 끄기 (커스텀 모달 사용)
+      useFormPopup: false, 
       useDetailPopup: false,
       isReadOnly: false,
       usageStatistics: false,
@@ -50,100 +71,153 @@ export default function CalendarPage() {
       week: { dayNames: ['일', '월', '화', '수', '목', '금', '토'], taskView: false },
     });
 
-    // (2) 이벤트 핸들러 등록: 날짜 드래그 -> 모달 열기
+    // (2) 날짜 빈 곳 드래그 -> 모달 열기
     calendarInstance.current.on('selectDateTime', (info) => {
-      const defaultCal = calendars.find(c => parseInt(c.category) <= MY_AUTH_LEVEL);
+      const currentCalendars = calendarsRef.current; 
+
+      if (currentCalendars.length === 0) {
+        alert("카테고리 목록을 불러오는 중입니다. 잠시만 기다려주세요.");
+        calendarInstance.current?.clearGridSelections();
+        return;
+      }
+
+      // 기본 카테고리 선택 로직 (권한에 맞는 것 중 첫 번째)
+      const defaultCal = currentCalendars.find(c => parseInt(c.category) <= myAuthLevel);
+      const safeId = defaultCal ? defaultCal.id : currentCalendars[0].id; 
       
-      setModalValues(prev => ({
-        ...prev, 
-        title: '', 
-        body: '', 
+      setModalValues({
+        id: '', 
+        title: '', body: '', location: '',
         start: new Date(info.start), 
         end: new Date(info.end),
         isAllday: info.isAllday || false, 
         isPrivate: false, 
-        location: '',
-        calendarId: defaultCal ? defaultCal.id : (prev.calendarId || '1')
-      }));
+        calendarId: safeId,
+        type: defaultCal ? defaultCal.category : '1',
+      });
       
       setIsModalOpen(true);
-      calendarInstance.current?.clearGridSelections(); // 드래그 선택영역 해제
+      calendarInstance.current?.clearGridSelections();
     });
 
-    // (3) 이벤트 핸들러 등록: 일정 드래그 이동/수정
+    // (3) 일정 드래그로 시간/날짜 변경
     calendarInstance.current.on('beforeUpdateEvent', ({ event, changes }) => {
-      axios.put(`${API_BASE_URL}/${event.id}`, changes).then(() => {
+      const toLocalISOString = (dateInput: any) => {
+         const date = new Date(dateInput);
+         const offset = date.getTimezoneOffset() * 60000;
+         const localDate = new Date(date.getTime() - offset);
+         return localDate.toISOString().slice(0, 16).replace('T', ' ') + ':00'; 
+      };
+
+      const updates: any = {};
+      if (changes.start) updates.calStartDt = toLocalISOString(changes.start);
+      if (changes.end) updates.calEndDt = toLocalISOString(changes.end);
+      if (changes.title) updates.calTitle = changes.title;
+      
+      axios.put(`${API_BASE_URL}/${event.id}`, updates).then(() => {
         calendarInstance.current?.updateEvent(event.id, event.calendarId, changes);
+      }).catch(err => {
+         console.error("업데이트 실패:", err);
+         alert("일정 이동 실패! (새로고침 해주세요)");
       });
     });
 
-    // (4) 이벤트 핸들러 등록: 일정 클릭 (여기선 삭제 예시)
+    // (4) 일정 클릭 -> 모달 열기 (상세보기 및 수정)
     calendarInstance.current.on('clickEvent', ({ event }) => {
-      if(window.confirm(`'${event.title}' 일정을 삭제하시겠습니까?`)) {
-         axios.delete(`${API_BASE_URL}/${event.id}`).then(() => {
-            calendarInstance.current?.deleteEvent(event.id, event.calendarId);
-         });
-      }
+      setModalValues({
+          id: String(event.id),
+          calendarId: String(event.calendarId),
+          title: String(event.title),
+          body: event.body || '',
+          location: event.location || '', // DB에 저장된 장소 불러오기
+          start: event.start.toDate(),
+          end: event.end.toDate(),
+          isAllday: event.isAllday || false,
+          isPrivate: event.raw?.openYn === 'N',
+          type: '1', // 타입은 나중에 캘린더ID로 매칭됨
+      });
+      setIsModalOpen(true);
     });
 
-    // (5) 데이터 로딩 시작
     loadCategories();
     updateHeaderDate();
 
-    // 청소(Cleanup)
     return () => {
       calendarInstance.current?.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 빈 배열: 최초 1회만 실행
+  }, []);
 
   // =================================================================
-  // 3. 데이터 로딩 로직
+  // 2. 데이터 로딩
   // =================================================================
   const loadCategories = () => {
-    axios.get(CATEGORY_API_URL).then((res) => {
+    axios.get(CATEGORY_API_URL, {
+        params: { empNo: myEmpNo, deptCode: myDeptCode }
+    }).then((res) => {
       let mapped = res.data.map((c: any) => ({
-        id: String(c.typeId), name: c.typeName, color: '#ffffff', bgColor: c.color, dragBgColor: c.color, borderColor: c.color, category: c.calCategory || '1',
+        id: String(c.id), 
+        name: c.name, 
+        category: c.category, // 1, 2, 3, 4(회의실)
+        color: '#ffffff', 
+        bgColor: c.color, 
+        dragBgColor: c.color, 
+        borderColor: c.color,
       }));
 
-      // [테스트용] 데이터 없으면 더미 데이터 사용
-      if (mapped.length === 0) {
-        mapped = [
-            { id: '1', name: '내 캘린더', color: '#ffffff', bgColor: '#9e5fff', dragBgColor: '#9e5fff', borderColor: '#9e5fff', category: '1' },
-            { id: '2', name: '개발팀', color: '#ffffff', bgColor: '#00a9ff', dragBgColor: '#00a9ff', borderColor: '#00a9ff', category: '2' },
-        ];
-      }
-
-      // 상태 업데이트 & 캘린더 적용
       setCalendars(mapped);
       setSelectedCalendars(mapped.map((c: CalendarCategory) => c.id));
-      calendarInstance.current?.setCalendars(mapped);
       
-      if (mapped.length > 0) {
-        setModalValues(prev => ({ ...prev, calendarId: mapped[0].id }));
+      if (calendarInstance.current) {
+        calendarInstance.current.setCalendars(mapped);
       }
-      
-      // 카테고리 로딩 후 일정 로딩
       loadEvents();
 
-    }).catch(err => {
-      console.error("카테고리 로드 실패:", err);
-      // 에러 나도 UI가 깨지지 않게 빈 배열 처리 가능
-    });
+    }).catch(err => console.error("카테고리 로드 실패:", err));
   };
 
   const loadEvents = () => {
-    axios.get(API_BASE_URL).then((res) => {
+    axios.get(API_BASE_URL, {
+        params: {
+            empNo: myEmpNo,
+            deptCode: myDeptCode,
+            _: new Date().getTime()
+        }
+    }).then((res) => {
       calendarInstance.current?.clear();
-      calendarInstance.current?.createEvents(res.data);
+      
+      const mappedEvents = res.data.map((event: any) => {
+          const categoryColor = event.calColor || '#3b82f6';
+          const safeStart = event.calStartDt ? String(event.calStartDt).replace(' ', 'T') : new Date();
+          const safeEnd = event.calEndDt ? String(event.calEndDt).replace(' ', 'T') : new Date();
+          const isAlldayEvent = (event.alldayYn === 'Y' || event.isAllday === true);
+
+          return {
+            id: String(event.calNo || event.id),
+            calendarId: String(event.typeId || event.calendarId || '1'),
+            title: event.calTitle || event.title || '제목 없음',
+            body: event.calContent || event.body || '',
+            location: event.calLocation || event.location || '', // 장소 매핑
+            start: safeStart, 
+            end: safeEnd,
+            category: isAlldayEvent ? 'allday' : 'time', 
+            isAllday: isAlldayEvent,
+            backgroundColor: categoryColor, 
+            borderColor: categoryColor,
+            dragBgColor: categoryColor,
+            color: isAlldayEvent ? '#ffffff' : '#000000',
+            isVisible: true,
+            raw: { openYn: event.openYn } 
+        };
+      });
+
+      calendarInstance.current?.createEvents(mappedEvents);
     }).catch(err => console.error("일정 로드 실패:", err));
   };
 
   // =================================================================
-  // 4. 기능 구현 (Header & Sidebar 연결)
+  // 3. 핸들러 (저장, 삭제, UI조작)
   // =================================================================
-  
-  // 헤더 날짜 업데이트
   const updateHeaderDate = () => {
     if (calendarInstance.current) {
       const d = calendarInstance.current.getDate();
@@ -151,96 +225,141 @@ export default function CalendarPage() {
     }
   };
 
-  // [Header] 날짜 이동 (이전/다음/오늘)
   const handleNav = (action: 'prev' | 'next' | 'today') => {
     calendarInstance.current?.[action]();
     updateHeaderDate();
   };
 
-  // [Header] 뷰 변경 (월간/주간/일간)
   const handleChangeView = (view: 'day' | 'week' | 'month') => {
     calendarInstance.current?.changeView(view);
     updateHeaderDate();
   };
 
-  // [Sidebar] 캘린더 체크박스 토글
   const handleToggleCalendar = (id: string) => {
     const nextSelected = selectedCalendars.includes(id)
       ? selectedCalendars.filter((cid) => cid !== id)
       : [...selectedCalendars, id];
     
     setSelectedCalendars(nextSelected);
-    // 실제 캘린더 화면에서도 숨김/표시 처리
     calendarInstance.current?.setCalendarVisibility(id, nextSelected.includes(id));
   };
 
-  // [Sidebar] 카테고리 추가
-  const handleAddCategory = (newCalData: { typeName: string; color: string; calCategory: string }) => {
-    axios.post(CATEGORY_API_URL, newCalData).then((res) => {
-       // 서버 저장 후 프론트에 반영
-       const newCal = {
-        id: String(res.data.typeId), name: res.data.typeName, color: '#ffffff',
-        bgColor: res.data.color, dragBgColor: res.data.color, borderColor: res.data.color, category: res.data.calCategory
-      };
-      
-      const nextCalendars = [...calendars, newCal];
-      setCalendars(nextCalendars); // 사이드바 UI 갱신
-      setSelectedCalendars([...selectedCalendars, newCal.id]);
-      calendarInstance.current?.setCalendars(nextCalendars); // 캘린더 내부 설정 갱신
-    });
+  const handleAddCategory = (newCalData: { name: string; color: string; category: string }) => {
+    const dataToSend = {
+        ...newCalData, 
+        ownerEmpNo: myEmpNo, 
+        deptCode: myDeptCode 
+    };
+
+    axios.post(CATEGORY_API_URL, dataToSend).then((res) => {
+        // ... (저장 후 로직 동일)
+        loadCategories(); // 편의상 재로딩 호출로 대체 가능
+    }).catch(err => alert("카테고리 추가 실패!"));
   };
 
-  // [Modal] 일정 저장
+  const handleColorChange = (id, newColor) => {
+      axios.put(`${CATEGORY_API_URL}/${id}`, { color: newColor }).then(() => {
+          loadCategories(); // 색상 변경 후 재로딩
+      }).catch(err => alert("색상 변경 실패: " + err));
+  };
+
+  const handleDeleteCategory = (id) => {
+      if(!window.confirm("정말 삭제하시겠습니까?")) return;
+      axios.delete(`${CATEGORY_API_URL}/${id}`).then(() => {
+          loadCategories();
+      }).catch(err => alert("삭제 실패: " + err));
+  };
+
+  const handleRenameCategory = (id: string, newName: string) => {
+    if (!newName.trim()) return;
+    axios.put(`${CATEGORY_API_URL}/${id}`, { name: newName }).then(() => {
+        loadCategories();
+    }).catch(err => alert("이름 수정 실패: " + err));
+  };
+
+  // 🔥 [일정 저장 핸들러] 장소(Location) 포함해서 전송
   const handleSaveEvent = () => {
     if (!modalValues.title.trim()) return alert("제목을 입력하세요.");
+    if (!myEmpNo) return alert("로그인 정보가 없습니다.");
+
+    const toLocalISOString = (date: Date) => {
+        const offset = date.getTimezoneOffset() * 60000;
+        const localDate = new Date(date.getTime() - offset);
+        return localDate.toISOString().slice(0, 16).replace('T', ' ') + ':00'; 
+    };
     
-    axios.post(API_BASE_URL, modalValues).then((res) => {
-      // 서버 저장 성공 시 캘린더에 즉시 추가
-      calendarInstance.current?.createEvents([res.data]);
-      setIsModalOpen(false);
-    }).catch(err => alert("저장 실패: " + err));
+    const eventData = {
+        calTitle: modalValues.title,
+        calContent: modalValues.body,
+        calStartDt: toLocalISOString(modalValues.start), 
+        calEndDt: toLocalISOString(modalValues.end),
+        calLocation: modalValues.location, // 🔥 모달에서 선택/입력한 장소
+        typeId: modalValues.calendarId, 
+        alldayYn: modalValues.isAllday ? 'Y' : 'N',
+        openYn: modalValues.isPrivate ? 'N' : 'Y',
+        empNo: myEmpNo 
+    };
+
+    if (modalValues.id) {
+        axios.put(`${API_BASE_URL}/${modalValues.id}`, eventData).then(() => {
+            loadEvents();
+            setIsModalOpen(false);
+            alert("수정되었습니다.");
+        }).catch(err => alert("수정 실패!"));
+    } else {
+        axios.post(API_BASE_URL, eventData).then(() => {
+            loadEvents();
+            setIsModalOpen(false);
+            alert("등록되었습니다.");
+        }).catch(err => alert("등록 실패!"));
+    }
   };
 
-  // =================================================================
-  // 5. 화면 렌더링 (View)
-  // =================================================================
+  const handleDeleteEvent = () => {
+      if (!modalValues.id) return;
+      axios.delete(`${API_BASE_URL}/${modalValues.id}`, { params: { empNo: myEmpNo } })
+      .then(() => {
+          loadEvents();
+          setIsModalOpen(false); 
+          alert("삭제되었습니다.");
+      }).catch(err => alert("삭제 실패: " + (err.response?.data || err.message)));
+  };
+
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* 1. 사이드바 (필터링, 추가) */}
+    <div className="flex min-h-screen bg-gray-50">
       <CalendarSidebar
         calendars={calendars}
         selectedCalendars={selectedCalendars}
         onToggle={handleToggleCalendar}
         onAddCategory={handleAddCategory}
-        onDeleteCategory={(id) => console.log("삭제 구현 필요", id)} // 필요시 구현
-        onColorChange={(id, color) => console.log("색상변경 구현 필요", id, color)} // 필요시 구현
-        authLevel={MY_AUTH_LEVEL}
+        onDeleteCategory={handleDeleteCategory} 
+        onRenameCategory={handleRenameCategory}
+        onColorChange={handleColorChange}
+        authLevel={myAuthLevel}
       />
 
-      {/* 2. 메인 영역 */}
-      <div className="flex-1 flex flex-col h-full bg-white relative">
-        {/* 헤더 (날짜이동, 뷰전환) */}
+      <div className="flex-1 flex flex-col bg-white relative">
         <CalendarHeader
           currentDate={currentDate}
           onNav={handleNav}
           onChangeView={handleChangeView}
         />
         
-        {/* Toast UI 캘린더가 그려질 빈 공간 */}
-        <div className="flex-1 p-4 overflow-hidden">
-           <div ref={containerRef} style={{ height: '100%' }} />
+        <div className="flex-1 p-4">
+           <div ref={containerRef} style={{ height: '650px' }} />
         </div>
       </div>
 
-      {/* 3. 일정 등록/수정 팝업 */}
       <EventModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveEvent}
+        onDelete={handleDeleteEvent}
         values={modalValues}
         setValues={setModalValues}
         calendars={calendars}
-        authLevel={MY_AUTH_LEVEL}
+        authLevel={myAuthLevel}
+        meetingRooms={MEETING_ROOMS} // 🔥 [핵심] 회의실 목록을 모달에 전달
       />
     </div>
   );
