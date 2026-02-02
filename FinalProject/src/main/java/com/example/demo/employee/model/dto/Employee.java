@@ -26,5 +26,6 @@ public class Employee {
 	private String profileImg;
 	// 주영 필요해서 추가작성
 	private int authorityLevel; // 권한 레벨
+	private String ownerEmpNo;
 
 }

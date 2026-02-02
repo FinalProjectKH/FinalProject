@@ -13,4 +13,5 @@ public class CalendarCategoryDto {
     private String category;    // 1(개인), 2(부서), 3(전사) -> 프론트 변수명과 일치시킴
     private String calNo;
 	private String ownerEmpNo;
+	private String deptCode;
 }

@@ -1,5 +1,9 @@
 package com.example.demo.calendar.model.dto;
 
+import java.time.LocalDateTime;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,8 +20,14 @@ public class CalendarDto {
     private String calTitle;     // 제목
     private String calContent;   // 내용 (기존 body -> 이름 변경 필수!)
     
-    private String calStartDt;   // 시작일 (기존 start -> 이름/타입 변경)
-    private String calEndDt;     // 종료일 (기존 end -> 이름/타입 변경)
+    // 🔥 String 대신 LocalDateTime 사용
+    // 🔥 pattern을 프론트에서 보내는 형식과 똑같이 맞춰줍니다.
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
+    private LocalDateTime calStartDt;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
+    private LocalDateTime calEndDt;
+    private String calColor;
     
     private String calLocation;  // 장소 (기존 location -> 이름 변경)
     
@@ -29,8 +39,11 @@ public class CalendarDto {
     private String openYn;       // 공개 여부 (Y/N)
     
     // 아래는 필요하다면 유지, 아니면 삭제해도 됨 (로직상엔 당장 안 쓰임)
-    private String calType;      // (구 type)
     private String categoryName; // (구 category)
+    
+    private String deptCode;
+    
+    private String ownerEmpNo;
     
     
 }

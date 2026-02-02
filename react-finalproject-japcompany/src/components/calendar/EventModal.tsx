@@ -12,23 +12,30 @@ interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
+  onDelete: () => void;
   values: ModalState;
   setValues: React.Dispatch<React.SetStateAction<ModalState>>;
   calendars: CalendarCategory[];
   authLevel: number;
+  meetingRooms?: string[]; // 🔥 [추가] 회의실 목록 (선택적)
 }
 
 export default function EventModal({
   isOpen,
   onClose,
   onSave,
+  onDelete,
   values,
   setValues,
   calendars,
   authLevel,
+  meetingRooms = [] // 🔥 [추가] 기본값 빈 배열
 }: EventModalProps) {
   
   const [selectedType, setSelectedType] = useState('1');
+
+  // 🔥 수정 모드인지 확인
+  const isEditMode = values.id && String(values.id).trim() !== '';
 
   // 모달 열릴 때 대분류 자동 세팅
   useEffect(() => {
@@ -66,31 +73,32 @@ export default function EventModal({
     }
   };
 
-  // 📍 [로직 추가] 날짜 포맷팅 (종일 여부에 따라 포맷 변경)
+  // 날짜 포맷팅
   const formatDate = (date: Date, isAllday: boolean) => {
     if (!date) return '';
     const d = new Date(date);
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    
-    // 종일이면 'YYYY-MM-DD' (시간 없음), 아니면 'YYYY-MM-DDTHH:mm' (시간 포함)
     return isAllday ? d.toISOString().slice(0, 10) : d.toISOString().slice(0, 16);
   };
 
-  // 날짜 변경 핸들러
   const handleDateChange = (name: string, val: string) => {
-    // 날짜 문자열(val)을 Date 객체로 변환해서 저장
     setValues({ ...values, [name]: new Date(val) });
   };
 
   if (!isOpen) return null;
 
+  // 🔥 현재 선택된 장소가 회의실 목록에 있는지 확인
+  // 목록에 없으면 'direct'(직접 입력) 모드로 간주
+  const isDirectLocation = !meetingRooms.includes(values.location);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white rounded-lg shadow-xl w-[600px] p-6 relative animate-fade-in-down">
         
+        {/* 헤더 영역 */}
         <div className="flex justify-between items-center mb-5 border-b pb-3">
           <div className="flex items-center gap-6">
-            <h2 className="text-xl font-bold text-gray-800">일정 등록/수정</h2>
+            <h2 className="text-xl font-bold text-gray-800">{isEditMode ? '일정 수정/삭제' : '새 일정 등록'}</h2>
             
             <div className="flex gap-4">
                 <label className="flex items-center gap-1.5 cursor-pointer select-none">
@@ -173,12 +181,11 @@ export default function EventModal({
                 />
             </div>
 
-            {/* 3. 날짜 (종일 체크 시 type="date"로 변경되어 시간 숨김) */}
+            {/* 3. 날짜 */}
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-xs font-bold mb-1 text-gray-500 uppercase tracking-wide">시작</label>
                     <input
-                        // 📍 [핵심] 종일이면 date, 아니면 datetime-local
                         type={values.isAllday ? "date" : "datetime-local"}
                         value={formatDate(values.start, values.isAllday)}
                         onChange={(e) => handleDateChange('start', e.target.value)}
@@ -196,17 +203,42 @@ export default function EventModal({
                 </div>
             </div>
 
-            {/* 4. 장소 */}
+            {/* 4. 장소 (회의실 선택 + 직접 입력) */}
             <div>
                 <label className="block text-xs font-bold mb-1 text-gray-500 uppercase tracking-wide">장소</label>
-                <input 
-                    type="text" 
-                    name="location" 
-                    value={values.location || ''} 
-                    onChange={handleChange} 
-                    className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-blue-500" 
-                    placeholder="장소를 입력하세요 (선택)"
-                />
+                <div className="flex flex-col gap-2">
+                    {/* 회의실 선택 Dropdown */}
+                    <select
+                        className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-blue-500 bg-white"
+                        value={isDirectLocation ? "direct" : values.location}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "direct") {
+                                setValues({ ...values, location: "" }); // 직접 입력 모드로 초기화
+                            } else {
+                                setValues({ ...values, location: val }); // 선택한 회의실로 설정
+                            }
+                        }}
+                    >
+                        <option value="direct">(직접 입력)</option>
+                        {meetingRooms.map((room) => (
+                            <option key={room} value={room}> {room}</option>
+                        ))}
+                    </select>
+
+                    {/* 직접 입력 Input (직접 입력 모드일 때만 보임 or 항상 보이게 할 수도 있음) */}
+                    {isDirectLocation && (
+                        <input 
+                            type="text" 
+                            name="location" 
+                            value={values.location || ''} 
+                            onChange={handleChange} 
+                            className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-blue-500 animate-fade-in" 
+                            placeholder="장소를 직접 입력하세요"
+                            autoFocus
+                        />
+                    )}
+                </div>
             </div>
 
             {/* 5. 내용 */}
@@ -221,14 +253,31 @@ export default function EventModal({
                 />
             </div>
 
-            {/* 6. 버튼 */}
-            <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-                <button onClick={onClose} className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors font-medium">
-                    취소
-                </button>
-                <button onClick={onSave} className="px-5 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm font-bold">
-                    저장하기
-                </button>
+            {/* 6. 버튼 영역 (삭제/저장) */}
+            <div className="flex justify-between mt-4 pt-4 border-t">
+                {/* 왼쪽: 삭제 버튼 (수정 모드일 때만) */}
+                <div>
+                    {isEditMode && (
+                        <button 
+                            onClick={() => {
+                                if(window.confirm("정말 이 일정을 삭제하시겠습니까?")) onDelete();
+                            }} 
+                            className="px-4 py-2.5 text-red-500 hover:bg-red-50 rounded-md font-medium border border-transparent hover:border-red-100"
+                        >
+                            삭제
+                        </button>
+                    )}
+                </div>
+
+                {/* 오른쪽: 취소 / 저장 버튼 */}
+                <div className="flex gap-2">
+                    <button onClick={onClose} className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors font-medium">
+                        취소
+                    </button>
+                    <button onClick={onSave} className="px-5 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm font-bold">
+                        {isEditMode ? '수정 완료' : '일정 등록'}
+                    </button>
+                </div>
             </div>
         </div>
       </div>

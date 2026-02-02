@@ -52,9 +52,6 @@ public class CalendarEntity {
     @Column(name = "CAL_CONTENT")
     private String calContent;
 
-    @Column(name = "CAL_COLOR")
-    private String calColor;
-
     @Column(name = "LOCATION")
     private String location;
 
@@ -69,4 +66,6 @@ public class CalendarEntity {
 
     @Column(name = "OPEN_YN", nullable = false, length = 1)
     private String openYn;
+    
+    
 }

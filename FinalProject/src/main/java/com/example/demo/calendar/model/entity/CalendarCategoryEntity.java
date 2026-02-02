@@ -23,5 +23,11 @@ public class CalendarCategoryEntity {
     @Column(name = "CAL_CATEGORY_TYPE")
     private String type;        
     
+    @Column(name = "OWNER_EMP_NO")
     private String ownerEmpNo;  // 누구 건지 (사번)
+    
+    @Column(name = "DEPT_CODE")
+    private String deptCode;
+    
+    
 }
