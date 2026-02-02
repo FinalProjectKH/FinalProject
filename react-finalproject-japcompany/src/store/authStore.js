@@ -34,6 +34,10 @@ export const useAuthStore = create(
         // 로그인 성공
         set({ user: employeeInfo, isLogin: true });
 
+        localStorage.setItem("loginEmpNo", employeeInfo.empNo);
+        localStorage.setItem("authorityLevel", employeeInfo.authorityLevel);
+        localStorage.setItem("loginDeptCode", employeeInfo.deptCode);
+
         // 1시간 자동 로그아웃 타이머
         if (get()._logoutTimer) clearTimeout(get()._logoutTimer);
 
@@ -61,6 +65,8 @@ export const useAuthStore = create(
           }
 
           localStorage.removeItem("auth-store");
+          localStorage.removeItem("loginEmpNo");
+          localStorage.removeItem("authorityLevel");
         }
       },
 

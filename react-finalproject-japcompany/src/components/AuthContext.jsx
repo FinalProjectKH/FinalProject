@@ -1,112 +1,108 @@
-import axios from "axios";
-import { createContext, useState } from "react";
+import { createContext, useState, useEffect } from "react"; // useEffect 추가 필수!
 import { axiosApi } from "../api/axiosAPI";
-
-
 
 export const AuthContext = createContext();
 
-// Context는 Provider(제공자)와 Consumer(소비자) 존재
+export const AuthProvider = ({ children }) => {
+  // 1. 상태 초기화
+  const [user, setUser] = useState(() => {
+    const storeUser = localStorage.getItem("userData");
+    return storeUser ? JSON.parse(storeUser) : null;
+  });
 
-// 전역 상태 제공자(Provider) 정의
-export const AuthProvider = ({children}) => {
-    // 상태값, 함수
-    // 전역적으로 현재 로그인한 회원의 정보를 기억할 상태 정의
-    const [user, setUser] = useState(() => {
-        const storeUser = localStorage.getItem("userData");
-        return storeUser ? JSON.parse(storeUser) : null;
-    });
-    
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+  const [id, setId] = useState("");
+  const [password, setPassword] = useState("");
 
-    // 이메일 입력 핸들러
-    const changeInputEmail = (e) => {
-        setEmail(e.target.value);
+  const changeInputId = (e) => {
+    setId(e.target.value);
+  }
+
+  const changeInputPw = (e) => {
+    setPassword(e.target.value);
+  }
+
+  // 2. 로그인 처리 함수
+  const handleLogin = async (inputId, inputPassword) => {
+    try {
+      // 🚨 백엔드 DTO 변수명(empId, empPw)이 맞는지 꼭 확인하세요!
+      const response = await axiosApi.post("/login", {
+        empId: inputId,
+        empPw: inputPassword,
+      });
+
+      const empInfo = response.data; 
+
+      if (!empInfo) {
+        alert("아이디 혹은 비밀번호 불일치");
+        return false;
+      }
+
+      // 🚨 [핵심 수정] 변수명 통일! ("loginEmpNo")
+      localStorage.setItem("userData", JSON.stringify(empInfo));
+      
+      // CalendarPage가 "loginEmpNo"를 찾으므로, 저장할 때도 이 이름이어야 합니다.
+      localStorage.setItem("loginEmpNo", empInfo.empNo); 
+      localStorage.setItem("authorityLevel", empInfo.authorityLevel); 
+
+      setUser(empInfo);
+      
+      // 타이머 시작
+      setupAutoLogout(); 
+
+      return true; 
+
+    } catch (error) {
+      console.error("로그인 에러:", error);
+      alert("로그인 처리 중 오류가 발생했습니다.");
+      return false;
     }
+  };
 
-    // 패스워드 입력 핸들러
-    const changeInputPw = (e) => {
-        setPassword(e.target.value);
+  // 3. 로그아웃 처리 함수
+  const handleLogout = async () => {
+    try {
+      await axiosApi.get("/logout");
+    } catch (error) {
+      console.log("로그아웃 요청 에러(무시):", error);
+    } finally {
+      // 🚨 [핵심 수정] 저장했던 이름 그대로 삭제
+      localStorage.removeItem("userData");
+      localStorage.removeItem("loginEmpNo"); // loginEmpNo 삭제
+      localStorage.removeItem("authorityLevel");
+      
+      setUser(null);
+      window.location.href = "/"; 
     }
+  };
 
-    // 로그인 처리 함수
-    const handleLogin = async(e) => {
-        e.preventDefault();
-        // 기본적으로 발생하는 이벤트 막음
+  // 4. [추가됨] 누락되었던 자동 로그아웃 함수 정의
+  const setupAutoLogout = () => {
+    setTimeout(() => {
+      alert("세션이 만료되었습니다. 다시 로그인해주세요.");
+      handleLogout();
+    }, 60 * 60 * 1000); // 1시간
+  };
 
-        // 비동기 로그인 요청 -> 서버로
-        const response = await axiosApi.post("/admin/login",
-            {memberEmail : email, memberPw : password}
-        );
-        console.log(response);
-
-        const adminInfo = response.data;
-
-        if(adminInfo.length === 0){
-            alert("이메일 혹은 비밀번호 불일치");
-            return;
-        }
-
-        // 상태에 셋팅
-        setUser(adminInfo);
-
-        // 데이터를 localStorage 에 저장
-        localStorage.setItem("userData", JSON.stringify(adminInfo));
-
-        // 만료시간 지정(1시간 뒤에 로그아웃) 타이머 설정
-        setTimeout(() => {
-            localStorage.removeItem("userData");
-            setUser(null);
-            alert("재로그인 해주세요~");
-            window.location.href = "/";
-        }, 60 * 60 * 1000) // 1시간 후
-
+  // 5. [추가됨] 새로고침 시에도 타이머 돌아가게 설정
+  useEffect(() => {
+    if (user) {
+      setupAutoLogout();
     }
+  }, [user]);
 
-    // 로그아웃 처리 함수
-    const handleLogout = async() => {
-        try {
-            const resp = await axiosApi.get("/admin/logout");
+  const globalState = {
+    user,
+    id,
+    password,
+    changeInputId,
+    changeInputPw,
+    handleLogin,
+    handleLogout
+  }
 
-            if(resp.status === 200){
-                localStorage.removeItem("userData");
-                setUser(null);
-            }
-        } catch (error) {
-            console.error("로그아웃 중 문제 발생 : ", error);
-        }
-    }
-
-    // 자식(하위) 컴포넌트에게 전달할 데이터를 하나로 묶기
-    const globalState = {
-        user, // user(key이름) : user(State값)
-        email,
-        password,
-        changeInputEmail,
-        changeInputPw,
-        handleLogin,
-        handleLogout
-    }
-
-    return (
-        <AuthContext.Provider value={globalState}>
-            {children}
-        </AuthContext.Provider>
-    )
-
+  return (
+    <AuthContext.Provider value={globalState}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
-
-// 브라우저에서 현재 로그인한 회원(관리자) 정보를 기억하도록 해야함.
-// localStorage : 
-// - 브라우저를 닫아도 데이터가 영구적으로 유지
-// - 브라우저 전역에서 사용(모든 탭과 창에서 공유됨)
-// 유효기간 만료 기능 없음
-
-// sessionStorage : 
-// - 브라우저 탭 또는 창을 닫으면 데이터가 즉시 삭제
-// - 현재 탭 또는 창에서만 데이터가 유지됨
-// - 유효기간 만료 기능 없음
-
-
-

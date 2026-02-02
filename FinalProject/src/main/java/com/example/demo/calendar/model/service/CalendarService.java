@@ -10,14 +10,20 @@ public interface CalendarService {
 
     CalendarDto createEvent(CalendarDto dto);
     
-    List<CalendarDto> findAllEvents();
+	List<CalendarDto> findAllEvents(String empNo, String deptCode);
     
     CalendarDto updateEvent(Long id, CalendarDto dto);
-    
-    void deleteEvent(Long id);
-    
-    List<CalendarCategoryDto> findAllCategories(); 
 
     CalendarCategoryDto createCategory(CalendarCategoryDto dto);
+
+	CalendarCategoryDto updateCategory(Long id, CalendarCategoryDto dto);
+
+	void deleteCategory(Long id);
+
+	List<CalendarCategoryDto> findAllCategories(String empNo, String deptCode);
+
+	void deleteEvent(Long id, String empNo);
+
+
 
 }
