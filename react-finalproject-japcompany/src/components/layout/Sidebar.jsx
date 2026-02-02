@@ -32,7 +32,7 @@ const Sidebar = () => {
         {/* menu */}
         <nav className="mt-2 px-5 space-y-1">
           <MenuItem to = "/attendance" icon={<Clock3 size={20}  />} label="근태관리" />
-          <MenuItem icon={<FileCheck2 size={20} />} label="전자결재" />
+          <MenuItem  to = "/approval" icon={<FileCheck2 size={20} />} label="전자결재" />
           <MenuItem to = "/calendar" icon={<CalendarDays size={20} />} label="캘린더" />
           <MenuItem icon={<Mail size={20} />} label="메신저" badge={3} onClick={() => setOrgOpen(true)}/>
           <MenuItem icon={<MessageSquareText size={20} />} label="게시판" />
