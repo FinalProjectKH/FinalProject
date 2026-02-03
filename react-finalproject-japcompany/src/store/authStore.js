@@ -18,6 +18,7 @@ export const useAuthStore = create(
 
       // 1. 새로고침 신호를 위한 상태 추가 (숫자가 바뀔 때마다 신호가 감)
       refreshTrigger: 0,
+      setUser: (user) => set({ user }),
 
       /* ====== Actions ====== */
 

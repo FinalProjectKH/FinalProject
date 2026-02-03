@@ -32,6 +32,6 @@ public class LoginMemberDTO {
 	private int authorityLevel;
 	
 	private String deptName;
-	private String parentDeptcode;
+	private String parentDeptCode;
 	
 }

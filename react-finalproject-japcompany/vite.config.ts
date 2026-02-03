@@ -7,10 +7,14 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/employee': {
+      "/employee": {
+        target: 'http://localhost',
+        changeOrigin: true,
+      },
+        "/org": {
         target: 'http://localhost',
         changeOrigin: true,
       },
     },
   },
-})
+});
