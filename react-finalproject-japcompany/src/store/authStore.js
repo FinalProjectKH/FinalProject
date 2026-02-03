@@ -16,7 +16,15 @@ export const useAuthStore = create(
       user: null,     // 로그인한 사원 정보
       isLogin: false,
 
+      // 1. 새로고침 신호를 위한 상태 추가 (숫자가 바뀔 때마다 신호가 감)
+      refreshTrigger: 0,
+
       /* ====== Actions ====== */
+
+      // 2. 신호를 발생시키는 액션 추가
+      triggerRefresh: () => set((state) => ({ 
+        refreshTrigger: state.refreshTrigger + 1 
+      })),
 
       // 로그인
       login: async (empId, empPw) => {

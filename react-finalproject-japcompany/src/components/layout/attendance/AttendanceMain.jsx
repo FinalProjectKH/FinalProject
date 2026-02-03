@@ -4,6 +4,7 @@ import AttendanceSummaryCard from "./AttendanceSummaryCard";
 import AttendanceWeeklyList from "./AttendanceWeeklyList";
 
 const AttendanceMain = () => {
+
   return (
 
     <section
@@ -23,7 +24,6 @@ const AttendanceMain = () => {
       {/* 아래 카드 (다음 단계) */}
       <AttendanceWeeklyList />
 
-      
     </section>
   );
 };
