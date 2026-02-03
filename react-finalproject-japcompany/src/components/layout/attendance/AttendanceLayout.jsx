@@ -10,26 +10,48 @@ const AttendanceLayout = () => {
   const { user, triggerRefresh } = useAuthStore();
 
   // 출근 로직
-  const handleClockIn = async () => {
+  const handleCheckIn = async () => {
     if (!user || !user.empNo) return alert("로그인 정보가 없습니다.");
 
     try {
-      // JSON 객체로 사번 전달
+      // 1. 백엔드 호출
       const response = await axios.post('http://localhost:80/api/attendance/check-in', {
         empNo: user.empNo
       });
 
+      // 2. 성공 시 처리 (200 OK)
       if (response.status === 200) {
-        alert("출근 처리가 완료되었습니다!");
-        triggerRefresh(); // 신호 발송!
+        alert("출근 처리가 완료되었습니다! 오늘도 화이팅하세요! 😊");
+        triggerRefresh(); // 카드와 리스트 갱신
       }
+
     } catch (error) {
-      alert(error.response?.data || "출근 처리 중 오류 발생");
+      // 3. 에러 상세 처리 (catch 블록 안으로 들어와야 함)
+      console.error("Check-in Error : ", error);
+
+      if (error.response) {
+        const status = error.response.status;
+        const errorMessage = error.response.data;
+
+        if (status === 403) {
+          // 보안상 상세 IP 노출 대신 친절한 안내 문구 출력
+          alert("🚫 출근 실패: 사내 지정 네트워크가 아닙니다. 사무실 Wi-Fi 연결을 확인해 주세요.");
+        } else if (status === 400) {
+          // 이미 출근했거나 데이터 오류인 경우 (백엔드에서 보낸 메시지 활용)
+          alert(`⚠️ 알림: ${errorMessage}`);
+        } else {
+          // 기타 서버 에러 (500 등)
+          alert("서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+        }
+      } else {
+        // 서버가 꺼져있거나 인터넷 연결 자체가 끊긴 경우
+        alert("서버와 통신할 수 없습니다. 네트워크 연결 상태를 확인하거나 관리자에게 문의하세요.");
+      }
     }
   };
 
   // 퇴근 로직 (출근과 형식을 맞췄어!)
-  const handleClockOut = async () => {
+  const handleCheckOut = async () => {
 
     // 1. 브라우저 기본 확인창 띄우기
     const isConfirmed = window.confirm("퇴근 버튼을 누르시겠습니까?");
@@ -80,7 +102,7 @@ const AttendanceLayout = () => {
         </div>
 
         {/* 오른쪽 사이드바 */}
-        <RightSidebar onClockIn={handleClockIn} onClockOut={handleClockOut} />
+        <RightSidebar onClockIn={handleCheckIn} onClockOut={handleCheckOut} />
       </div>
     </div>
   );

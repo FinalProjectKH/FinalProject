@@ -13,15 +13,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.attendance.model.entity.Attendance;
 import com.example.demo.attendance.model.repository.AttendanceRepository;
+import com.example.demo.attendance.model.repository.CompanyInfoRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(rollbackFor = Exception.class)
+@Slf4j
 public class AttendanceServiceImpl implements AttendanceService {
 
 	private final AttendanceRepository attendanceRepository;
+	private final CompanyInfoRepository companyInfoRepository;
 
 	// 업무일 존재 여부 서비스
 	@Override
@@ -99,6 +103,19 @@ public class AttendanceServiceImpl implements AttendanceService {
 		// JPA가 생성하는 쿼리: WHERE work_date BETWEEN start AND end
 		// 날짜 순서대로 보여주기 위해 ASC 메서드 사용
 		return attendanceRepository.findByEmpNoAndWorkDateBetweenOrderByWorkDateAsc(empNo, start, end);
+	}
+	
+	public void checkIpAddress(String clientIp) {
+		// DB에서 허용된 IP 목록에 있는지 조회
+		boolean isAllowed = companyInfoRepository.existsByAllowedIp(clientIp);
+		
+		if(!isAllowed) {
+			// 1. 서버 로그에는 남김 (관리자용)
+			log.info("[보안 알림] 허용되지 않은 IP 접속 시도됨 - 접속 IP: {}", clientIp);
+			
+			// 2. 사용자에게는 핵심 내용만 전달
+			throw new RuntimeException("사내 지정 네트워크 환경에서만 출근이 가능합니다. (사내 Wi-Fi를 확인해 주세요)");
+		}
 	}
 
 }

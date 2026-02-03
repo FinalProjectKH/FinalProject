@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.attendance.model.entity.Attendance;
 import com.example.demo.attendance.model.service.AttendanceServiceImpl;
+import com.example.demo.common.utility.CommonUtils;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -27,28 +29,52 @@ public class AttendanceController {
 	
 	private final AttendanceServiceImpl attendanceService;
 	
-	// 출근
+	// 출근 처리 컨트롤러
 	@PostMapping("/check-in")
-	public ResponseEntity<?> checkIn(@RequestBody Map<String, String> request) {
+	public ResponseEntity<?> checkIn(@RequestBody Map<String, String> request, 
+	                                 HttpServletRequest httpRequest) {
+	    
 	    try {
-	        String empNo = request.get("empNo"); // JSON에서 empNo만 추출
+	        // 1. 유틸리티 IP 추출
+	        String clientIp = CommonUtils.getClientIp(httpRequest);
 	        
-	        // 1. 출근 처리 수행
+	        // 로컬 테스트(IPv6) 환경 대응
+	        if ("0:0:0:0:0:0:0:1".equals(clientIp)) {
+	            clientIp = "127.0.0.1";
+	        }
+	        
+	        // 2. IP 검증 로직 수행 (가장 먼저 수행하여 보안 확인)
+	        // 서비스 내부에서 DB(COMPANY_INFO 등)의 허용 IP와 비교 후, 다르면 RuntimeException 발생
+	        attendanceService.checkIpAddress(clientIp);
+	        
+	        // 3. 요청 데이터(사번) 추출
+	        String empNo = request.get("empNo");
+	        if (empNo == null || empNo.isEmpty()) {
+	            return ResponseEntity.badRequest().body("사원 번호가 누락되었습니다.");
+	        }
+	        
+	        // 4. 출근 처리 수행 (중복 출근 체크 등 비즈니스 로직 포함)
 	        attendanceService.checkIn(empNo);
 	        
-	        // 2. 새로고침 방지를 위해 여기서 바로 최신 목록을 조회해서 반환
-	        // 서비스 메서드에 startDate가 추가되었으므로, null 추가
-	        // 이번 주 월요일 기준으로 목록을 가져옴
-	        List<Attendance> updatedList = attendanceService.getWeeklyAttendance(empNo, null);
+	        // 5. 최신 주간 목록 조회 (React 화면 업데이트를 위한 데이터 반환)
+	        // 이번 주 월요일 기준 목록 반환 (startDate를 null로 보내면 서비스에서 자동 계산)
+	        List<Attendance> updateList = attendanceService.getWeeklyAttendance(empNo, null);
 	        
-	        return ResponseEntity.ok(updatedList); // 메시지 대신 리스트를 보냄
+	        // 성공 시 200 OK와 함께 리스트 반환
+	        return ResponseEntity.ok(updateList);
 	        
 	    } catch (RuntimeException e) {
-	        return ResponseEntity.badRequest().body(e.getMessage());
+	        // IP 불일치 혹은 이미 출근한 경우 등 서비스에서 던진 예외 처리
+	        // 403 Forbidden: 권한 없음(IP 오류) 혹은 상황에 맞는 에러 메시지 반환
+	        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+	    } catch (Exception e) {
+	        // 예상치 못한 기타 서버 에러 처리
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 오류가 발생했습니다.");
 	    }
 	}
+	    	
 	
-	// 퇴근
+	// 퇴근 처리 컨트롤러
 	@PostMapping("/check-out")
 	public ResponseEntity<String> checkOut(@RequestBody Map<String, String> request) {
 	    
@@ -64,6 +90,7 @@ public class AttendanceController {
 	    }
 	}
 	
+	// 주간 리스트 목록 컨트롤러
 	@GetMapping("/weekly/{empNo}")
 	public ResponseEntity<List<Attendance>> getWeeklyAttendance
 										(@PathVariable("empNo") String empNo,
