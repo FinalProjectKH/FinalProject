@@ -108,6 +108,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 	public void checkIpAddress(String clientIp) {
 		// DB에서 허용된 IP 목록에 있는지 조회
 		boolean isAllowed = companyInfoRepository.existsByAllowedIp(clientIp);
+		log.info("DB 대조 결과 - 존재 여부: {}", isAllowed); // 여기서 false가 뜨는지 확인!
 		
 		if(!isAllowed) {
 			// 1. 서버 로그에는 남김 (관리자용)
