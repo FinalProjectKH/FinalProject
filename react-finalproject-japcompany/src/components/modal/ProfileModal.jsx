@@ -1,20 +1,42 @@
 // components/modal/ProfileModal.jsx
+import { useNavigate } from "react-router-dom";
+import { axiosApi } from "../../api/axiosAPI";
+import { useAuthStore } from "../../store/authStore";
+
 const ProfileModal = ({ open }) => {
+  const navigate = useNavigate();
+  const setUser = useAuthStore((s)=>s.setUser);
+
   if (!open) return null;
+
+  const handleLogout = async () => {
+
+    try {
+      await axiosApi.post("/employee/logout");
+      setUser(null);
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("로그아웃 실패", error);
+    }
+  };
 
   return (
     <div className="absolute top-16 right-10 z-50">
       <div className="w-[240px] rounded-2xl bg-white/40 backdrop-blur-xl shadow-xl p-4">
-        <MenuItem label="프로필 변경" />
+        <MenuItem label="내 정보 설정" onClick={() => navigate("/profile")} />
         <Divider />
-        <MenuItem label="비밀번호 변경" />
+        <MenuItem label="보안 설정" onClick={() => navigate("/password")}/>
+        <Divider />
+        <MenuItem label="로그아웃" onClick={handleLogout}/>
       </div>
     </div>
   );
 };
 
-const MenuItem = ({ label }) => (
-  <div className="py-3 text-sm cursor-pointer hover:opacity-80">
+const MenuItem = ({label, onClick }) => (
+  <div 
+  onClick={onClick}
+  className="py-3 text-sm cursor-pointer hover:opacity-80">
     {label}
   </div>
 );

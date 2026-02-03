@@ -1,5 +1,6 @@
 import {NavLink} from "react-router-dom";
 import { useState } from "react";
+import { ActiveOrg } from "../org/orgTree";
 import {
   Clock3,
   FileCheck2,
@@ -49,49 +50,47 @@ const Sidebar = () => {
     </aside>
 
 
-{orgOpen && (
-  <div className="fixed inset-0 z-50 pointer-events-none">
-    <div
-      className="fixed w-[420px] h-[520px] rounded-xl bg-white text-black p-4 shadow-xl pointer-events-auto"
-      style={{ left: orgPos.x, top: orgPos.y }}
-    >
-      {/* 드래그 핸들 */}
-      <div
-        className="flex justify-between items-center mb-3 cursor-move select-none"
-        onMouseDown={(e) => {
-          const startX = e.clientX;
-          const startY = e.clientY;
-          const { x, y } = orgPos;
-
-          const onMove = (ev) => {
-            setOrgPos({
-              x: x + (ev.clientX - startX),
-              y: y + (ev.clientY - startY),
-            });
-          };
-
-          const onUp = () => {
-            window.removeEventListener("mousemove", onMove);
-            window.removeEventListener("mouseup", onUp);
-          };
-
-          window.addEventListener("mousemove", onMove);
-          window.addEventListener("mouseup", onUp);
-        }}
-      >
-        <h2 className="font-bold">조직도 (임시)</h2>
-        <button onClick={() => setOrgOpen(false)}>✕</button>
-      </div>
-
-      <div className="h-[460px] overflow-y-auto text-sm text-gray-700">
-        여기 나중에 조직도 들어감
-      </div>
-    </div>
-  </div>
-)}
-
-
-    </> 
+      {orgOpen && (
+        <div className="fixed inset-0 z-50 pointer-events-none">
+          <div
+            className="fixed w-[420px] h-[520px] rounded-xl bg-white text-black p-4 shadow-xl pointer-events-auto"
+            style={{ left: orgPos.x, top: orgPos.y }}
+          >
+            {/* 드래그 핸들 */}
+            <div
+              className="flex justify-between items-center mb-3 cursor-move select-none"
+              onMouseDown={(e) => {
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const { x, y } = orgPos;
+              
+                const onMove = (ev) => {
+                  setOrgPos({
+                    x: x + (ev.clientX - startX),
+                    y: y + (ev.clientY - startY),
+                  });
+                };
+              
+                const onUp = () => {
+                  window.removeEventListener("mousemove", onMove);
+                  window.removeEventListener("mouseup", onUp);
+                };
+              
+                window.addEventListener("mousemove", onMove);
+                window.addEventListener("mouseup", onUp);
+              }}
+            >
+              <h2 className="font-bold">조직도 (임시)</h2>
+              <button onClick={() => setOrgOpen(false)}>✕</button>
+            </div>
+            
+            <div className="h-[460px] overflow-y-auto text-sm text-gray-700">
+              <ActiveOrg/>
+            </div>
+          </div>
+        </div>
+      )}
+   </> 
   );
 };
 
