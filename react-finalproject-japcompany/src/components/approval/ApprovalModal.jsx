@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaFileAlt, FaPlane, FaCalculator, FaTimes } from 'react-icons/fa'; // 검색 아이콘(FaSearch) 제거
+import { FaFileAlt, FaPlane, FaCalculator, FaTimes } from 'react-icons/fa';
 
 export default function ApprovalModal({ isOpen, onClose }) {
   const navigate = useNavigate();
@@ -38,10 +38,10 @@ export default function ApprovalModal({ isOpen, onClose }) {
 
   return (
     // 배경 (Overlay)
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
       
       {/* 모달 박스 */}
-      <div className="bg-white rounded-lg shadow-2xl w-[500px] overflow-hidden animate-fade-in-up">
+      <div className="bg-white z-200 rounded-lg shadow-2xl w-[500px] overflow-hidden animate-fade-in-up">
         
         {/* 1. 헤더 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">

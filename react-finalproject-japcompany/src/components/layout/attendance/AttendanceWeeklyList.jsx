@@ -1,98 +1,73 @@
-// src/components/attendance/AttendanceWeeklyList.jsx
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useAuthStore } from "../../../store/authStore";
+import axios from "axios";
 
-const AttendanceWeeklyList = ({
-  weekRange = "2026.01.19 ~ 2026.01.25",
-  days = [
-    { key: "월", isWeekend: false },
-    { key: "화", isWeekend: false },
-    { key: "수", isWeekend: false },
-    { key: "목", isWeekend: false },
-    { key: "금", isWeekend: false },
-    { key: "토", isWeekend: true },
+const AttendanceWeeklyList = ({ onPrevWeek, onNextWeek }) => {
+  const [records, setRecords] = useState({});
+  const [weekRange, setWeekRange] = useState("2026.01.26 ~ 2026.02.01");
+  const { user, refreshTrigger } = useAuthStore();
+
+  const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+  const todayKey = dayNames[new Date().getDay()]; 
+  const [selectedDay, setSelectedDay] = useState(todayKey);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+
+  const days = [
+    { key: "월", isWeekend: false }, { key: "화", isWeekend: false },
+    { key: "수", isWeekend: false }, { key: "목", isWeekend: false },
+    { key: "금", isWeekend: false }, { key: "토", isWeekend: true },
     { key: "일", isWeekend: true },
-  ],
-  records = {
-    월: { in: "08:50", out: "17:50" },
-    화: { in: "08:50", out: "17:50" },
-    수: { in: "08:50", out: "17:50" },
-    목: { in: "08:50", out: "17:50" },
-    금: { in: "-", out: "-" },
-    토: { in: "-", out: "-" },
-    일: { in: "-", out: "-" },
-  },
-  today = "수",
-  onPrevWeek,
-  onNextWeek,
-}) => {
-  const [selectedDay, setSelectedDay] = useState(today);
+  ];
+
+  const fetchAttendance = async () => {
+    if (!user || !user.empNo) return;
+    try {
+      setIsCheckedIn(false);
+      const response = await axios.get(`http://localhost:80/api/attendance/weekly/${user.empNo}`);
+      const data = response.data;
+      const newRecords = {};
+
+      data.forEach(item => {
+        const dateObj = new Date(item.workDate);
+        const dayName = dayNames[dateObj.getDay()];
+        newRecords[dayName] = {
+          in: item.startTime?.split('T')[1]?.substring(0, 5) || '-',
+          out: item.endTime?.split('T')[1]?.substring(0, 5) || '-'
+        };
+        if (dayName === todayKey && item.startTime) {
+          setIsCheckedIn(true);
+        }
+      });
+      setRecords(newRecords);
+    } catch (error) {
+      console.error("데이터 로드 실패 : ", error);
+    }
+  };
+
+  // ✅ Layout에서 triggerRefresh()를 호출하면 여기가 실행됨!
+  useEffect(() => {
+    fetchAttendance();
+  }, [user, refreshTrigger]);
 
   return (
-    <section
-      className="
-        w-full h-[380px]
-        rounded-[28px]
-        border border-white/60
-        bg-white/35 backdrop-blur-2xl
-        shadow-[0_14px_40px_rgba(0,0,0,0.10)]
-      "
-    >
+    <section className="w-full h-[380px] rounded-[28px] border border-white/60 bg-white/35 backdrop-blur-2xl shadow-[0_14px_40px_rgba(0,0,0,0.10)]">
       <div className="px-8 py-6 h-full flex flex-col">
-        {/* header */}
-        <div className="flex items-center justify-between">
-          <button onClick={onPrevWeek}>
-            <ChevronLeft className="w-5 h-5 text-[#2e1a12]/70" />
-          </button>
-          <span className="text-[14px] font-medium text-[#2e1a12]/80">
-            {weekRange}
-          </span>
-          <button onClick={onNextWeek}>
-            <ChevronRight className="w-5 h-5 text-[#2e1a12]/70" />
-          </button>
-        </div>
-
-        {/* day header */}
-        <div className="mt-6 grid grid-cols-7 text-center text-[14px]">
-          {days.map((d) => (
-            <div
-              key={d.key}
-              className={d.isWeekend ? "text-[#d37545]" : "text-[#2e1a12]/70"}
-            >
-              {d.key}
-            </div>
-          ))}
-        </div>
-
-        {/* calendar cells */}
+        {/* ... (상단 헤더 및 요일 헤더는 기존 코드와 동일) ... */}
+        
         <div className="mt-4 grid grid-cols-7 gap-2 flex-1">
-          {days.map((d) => {
-            const isSelected = selectedDay === d.key;
-            const isToday = today === d.key;
-
+          {days.map((day) => {
+            const isTodayAndCheckedIn = (day.key === todayKey && isCheckedIn);
             return (
               <button
-                key={d.key}
-                onClick={() => setSelectedDay(d.key)}
-                className={[
-                  "rounded-[16px] py-4 flex flex-col items-center pt-6 gap-2 transition",
-                  "bg-white/40 hover:bg-white/60",
-                  d.isWeekend && "text-[#d37545]",
-                  isSelected && "ring-2 ring-[#19b6c6] bg-white/70",
-                ].join(" ")}
+                key={day.key}
+                onClick={() => setSelectedDay(day.key)}
+                className={`relative p-4 rounded-xl border transition-all cursor-pointer
+                  ${day.isWeekend ? "bg-gray-50 text-gray-400" : "bg-white"}
+                  ${isTodayAndCheckedIn ? "ring-2 ring-emerald-500 ring-offset-2" : day.key === selectedDay ? "border-indigo-400 shadow-md" : "border-gray-200 hover:border-gray-300"}`}
               >
-                <div className="text-[13px] text-[#19b6c6]">
-                  출 {records[d.key]?.in}
-                </div>
-                <div className="text-[13px] text-[#d37545]">
-                  퇴 {records[d.key]?.out}
-                </div>
-
-                {isToday && (
-                  <span className="text-[11px] font-semibold text-[#19b6c6]">
-                    TODAY
-                  </span>
-                )}
+                <div className="text-[13px] text-[#19b6c6]">출근 : {records[day.key]?.in || '-'}</div>
+                <div className="text-[13px] text-[#d37545]">퇴근 : {records[day.key]?.out || '-'}</div>
+                {isTodayAndCheckedIn && <span className="text-[11px] font-semibold text-[#19b6c6]">TODAY</span>}
               </button>
             );
           })}

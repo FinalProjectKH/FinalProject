@@ -1,6 +1,6 @@
 // src/pages/Calendar.tsx
 import React from 'react';
-import ApprovalMain from '../components/Approval/ApprovalMain'; 
+import ApprovalMain from '../components/approval/ApprovalMain'; 
 import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
 import ApprovalHeader from '../components/approval/ApprovalHeader';
