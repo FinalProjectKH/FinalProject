@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.attendance.model.entity.Attendance;
@@ -36,7 +37,9 @@ public class AttendanceController {
 	        attendanceService.checkIn(empNo);
 	        
 	        // 2. 새로고침 방지를 위해 여기서 바로 최신 목록을 조회해서 반환
-	        List<Attendance> updatedList = attendanceService.getWeeklyAttendance(empNo);
+	        // 서비스 메서드에 startDate가 추가되었으므로, null 추가
+	        // 이번 주 월요일 기준으로 목록을 가져옴
+	        List<Attendance> updatedList = attendanceService.getWeeklyAttendance(empNo, null);
 	        
 	        return ResponseEntity.ok(updatedList); // 메시지 대신 리스트를 보냄
 	        
@@ -62,8 +65,11 @@ public class AttendanceController {
 	}
 	
 	@GetMapping("/weekly/{empNo}")
-	public ResponseEntity<List<Attendance>> getWeeklyAttendance(@PathVariable("empNo") String empNo) {
-		List<Attendance> list = attendanceService.getWeeklyAttendance(empNo);
+	public ResponseEntity<List<Attendance>> getWeeklyAttendance
+										(@PathVariable("empNo") String empNo,
+										@RequestParam(name = "startDate", required = false) String startDate) {
+		
+		List<Attendance> list = attendanceService.getWeeklyAttendance(empNo, startDate);
 		
 		return ResponseEntity.ok(list);
 	}

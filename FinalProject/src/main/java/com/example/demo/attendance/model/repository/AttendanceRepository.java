@@ -29,6 +29,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Attendan
 	Optional<Attendance> findByEmpNoAndWorkDate(String empNo, LocalDate workDate);
 	
 	// 특정 사원의 특정 기간(시작일 ~ 종료일) 데이터를 모두 가져오는 쿼리 메서드
-	List<Attendance> findByEmpNoAndWorkDateBetweenOrderByWorkDateDesc(String empNo, LocalDate startDate, LocalDate endDate);
+	List<Attendance> findByEmpNoAndWorkDateBetweenOrderByWorkDateAsc(String empNo, LocalDate startDate, LocalDate endDate);
 
 }

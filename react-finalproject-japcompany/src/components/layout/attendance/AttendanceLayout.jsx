@@ -30,7 +30,21 @@ const AttendanceLayout = () => {
 
   // 퇴근 로직 (출근과 형식을 맞췄어!)
   const handleClockOut = async () => {
-    if (!user || !user.empNo) return alert("로그인 정보가 없습니다.");
+
+    // 1. 브라우저 기본 확인창 띄우기
+    const isConfirmed = window.confirm("퇴근 버튼을 누르시겠습니까?");
+
+    // 2. 사용자가 '취소'를 눌렀다면 함수를 여기서 종료!
+    if (!isConfirmed) {
+      return;
+    }
+
+    // 세션 만료 및 비정상적인 접근 방어 코드
+    if (!user || !user.empNo) {
+      alert("세션이 만료되었습니다. 다시 로그인해 주세요.");
+      window.location.href = "/login"; // 로그인 페이지로 이동
+      return;
+    }
 
     try {
       // 퇴근도 JSON 객체 형식으로 보내는 것이 서버(Spring)에서 받기 편해!
