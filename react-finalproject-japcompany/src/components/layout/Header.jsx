@@ -2,9 +2,12 @@ import { useState } from "react";
 import { ProfileModal } from "../modal";
 import { Search } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
+import  MyInfoModal from "../modal/MyInfoModal";
 
 const Header = () => {
   const [openProfile, setOpenProfile] = useState(false);
+  const [openMyInfo, setOpenMyInfo] = useState(false);
+  const [openPassword, setOpenPassword] = useState(false);
 
   const user = useAuthStore((state) => state.user );
 
@@ -51,9 +54,52 @@ const Header = () => {
         </button>
       </div>
 
-      <ProfileModal open={openProfile} />
+       <ProfileModal
+        open={openProfile}
+        onClose={() => setOpenProfile(false)}
+        onOpenMyInfo={() => {
+          setOpenProfile(false);
+          setOpenMyInfo(true);
+        }}
+        onOpenPassword={() => {
+          setOpenProfile(false);
+          setOpenPassword(true);
+        }}
+      />
+
+      <MyInfoModal
+        open={openMyInfo}
+        onClose={() => setOpenMyInfo(false)}
+       />
+
+      {/* <PasswordModal
+        open={openPassword}
+        onClose={() => setOpenPassword(false)}
+      /> */}
+
     </header>
   );
 };
 
 export default Header;
+
+
+
+/*
+
+open
+→ ProfileModal(드롭다운)을 보여줄지 말지 결정하는 상태값
+
+onClose
+→ 드롭다운을 닫는 함수
+(로그아웃 후, 바깥 클릭 처리 등에 사용)
+
+onOpenMyInfo
+→ “내 정보 설정” 클릭 시 호출
+→ ProfileModal은 닫고, MyInfoModal을 열라고 Header에 알림
+
+onOpenPassword
+→ “보안 설정” 클릭 시 호출
+→ ProfileModal은 닫고, PasswordModal을 열라고 Header에 알림
+
+*/

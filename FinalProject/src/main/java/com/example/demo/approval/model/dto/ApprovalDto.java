@@ -1,0 +1,64 @@
+package com.example.demo.approval.model.dto;
+
+import java.util.List;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ApprovalDto {
+	
+	/*APPROVAL TABLE*/
+	
+	private String docNo;           // 문서번호 => 20260202-00000001 이런형식
+	private String empNo;           // 기안자 사번
+	private String approvalDate;    // 기안 일자
+	private int retentionYear;      // 보존년한
+	private String approvalTitle;   // 문서 제목
+	private String approvalContent; // 문서 내용
+	private String approvalStatus;  // 결재 상태
+	private String approvalFile;    // 첨부 파일
+	private String relatedDocNo;    // 관련 문서
+	
+	private String empName;         // 사원 이름
+	private String deptName;        // 부서 이름
+	
+	// ---------------------------------------------- //
+	/*APPROVAL_VACATION TABLE*/
+	
+	private String vacationType;   // 휴가 종류
+	private String startDate;      // 휴가 시작일
+	private String endDate;        // 휴가 종료일
+	private double totalUse;       // 총 사용 휴가
+	private String vacationReason; // 휴가 사유
+	
+	// ---------------------------------------------- //
+	/*VACATION_TYPE TABLE*/
+	
+	private String vacationName; // 휴가 이름
+	private String deductYn;     // 연차 차감 여부
+	private double deductCount;  // 연차 차감 일수 (0.5 = 반차)
+	private String payYn;        // 유급 휴가 여부 (Y = 유급)
+	
+	// ---------------------------------------------- //
+	/*APPROVAL_EXPENSE TABLE*/
+	
+	private String expenseDate;   // 예산 희망일 ex) 202602
+	private int totalAmount;      // 총 신청 금액
+	private String accountCode;   // 예산 과목 코드
+	private String expenseReason; // 신청 사유
+	
+	// ---------------------------------------------- //
+	/*APPROVAL_LINE TABLE*/
+	private List<ApprovalLineDto> approvalLineList;
+	
+	
+	
+	
+
+}
