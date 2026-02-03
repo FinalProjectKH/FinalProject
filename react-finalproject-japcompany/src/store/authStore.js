@@ -16,6 +16,8 @@ export const useAuthStore = create(
       user: null,     // 로그인한 사원 정보
       isLogin: false,
 
+      setUser: (user) => set({ user }),
+
       /* ====== Actions ====== */
 
       // 로그인

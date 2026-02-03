@@ -18,9 +18,9 @@ export default function ApprovalHeader() {
     // 2. 메뉴별 제목 매핑
     switch (pathname) {
       case '/approval': 
-        return '전자결재 홈'; // 첫 번째 스크린샷
+        return '전자결재 홈'; 
       case '/approval/wait':
-        return '결재 대기 문서'; // 두 번째 스크린샷
+        return '결재 대기 문서'; 
       case '/approval/upcoming':
         return '결재 예정 문서';
       case '/approval/refer':

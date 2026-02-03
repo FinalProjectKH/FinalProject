@@ -32,7 +32,7 @@ export default function ApprovalSidebar() {
       title: "결재하기",
       hasSettings: false,
       items: [
-        { id: "wait", label: "결재 대기 문서", path: "/approval", count: 1 }, // 🔥 파란 숫자
+        { id: "wait", label: "결재 대기 문서", path: "/approval/wait", count: 1 }, // 🔥 파란 숫자
         { id: "upcoming", label: "결재 예정 문서", path: "/approval/upcoming" },
         { id: "refer", label: "참조/열람 대기 문서", path: "/approval/refer" },
       ]
@@ -67,7 +67,7 @@ export default function ApprovalSidebar() {
       <div className="h-14 flex items-center px-5 border-b border-gray-100">
               <h1 
         className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors"
-        onClick={() => window.location.reload()}
+        onClick={() => navigate('/approval')}
         title="새로고침"
       >
         <br />전자결재
