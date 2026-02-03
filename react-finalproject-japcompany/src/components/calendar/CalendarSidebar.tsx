@@ -353,6 +353,9 @@ export default function CalendarSidebar({
             <p className="text-[10px] text-gray-400 text-center mt-1">
                 *관리자(Lv.3) 전용 기능
             </p>
+            <p className="text-[10px] text-gray-400 text-center mt-1">
+                3년 뒤 데이터는 가져오지 못합니다 !!
+            </p>
         </div>
     )}
 
