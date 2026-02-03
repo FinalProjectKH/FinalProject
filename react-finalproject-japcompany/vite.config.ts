@@ -15,6 +15,10 @@ export default defineConfig({
         target: 'http://localhost',
         changeOrigin: true,
       },
+       "/mypage": {
+        target: 'http://localhost',
+        changeOrigin: true,
+      },
     },
   },
 });
