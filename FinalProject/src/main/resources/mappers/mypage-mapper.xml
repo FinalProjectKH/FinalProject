@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.demo.mypage.model.mapper.MypageMapper">
+
+   
+<!--   <select id="login" parameterType="com.example.demo.employee.model.dto.Employee"
+   resultType="com.example.demo.employee.model.dto.LoginMemberDTO">
+		SELECT
+		E.EMP_NO,
+		E.EMP_NAME,
+		E.EMP_ID,
+		E.EMP_PW,
+		E.DEPT_CODE,
+		E.POSITION_CODE,
+		E.EMP_EMAIL,
+		E.EMP_NICKNAME,
+		E.EMP_PHONE,
+		TO_CHAR(E.ENROLL_DATE, 'YYYY-MM-DD') AS ENROLL_DATE,
+		E.EMP_DEL_FL,
+		E.INTRODUCTION,
+		E.PROFILE_IMG,
+		P.POSITION_NAME,
+		P.AUTHORITY_LEVEL,
+		D.DEPT_NAME,
+		D.PARENT_DEPT_CODE
+		FROM EMPLOYEE E
+		JOIN POSITION P
+		ON E.POSITION_CODE = P.POSITION_CODE
+		LEFT JOIN DEPARTMENT D
+		ON E.DEPT_CODE = D.DEPT_CODE
+		WHERE E.EMP_ID = #{empId}
+		AND E.EMP_DEL_FL = 'N'
+   </select>-->
+   
+   <select id="selectEmployee">
+   SELECT EMP_EMAIL, EMP_NICKNAME, EMP_PHONE, INTRODUCTION
+   FROM EMPLOYEE
+   WHERE EMP_NO = #{empNo}
+   </select>
+   
+   <update id="updateEmployee">
+   UPDATE "EMPLOYEE"
+   	<set>
+   	<if test="empEmail != null">EMP_EMAIL = #{empEmail, jdbcType=VARCHAR},</if>
+   	<if test="empNickname != null">EMP_NICKNAME = #{empNickname, jdbcType=VARCHAR},</if>
+   	<if test="empPhone != null">EMP_PHONE = #{empPhone, jdbcType=VARCHAR},</if>
+   	<if test="introduction != null">INTRODUCTION = #{introduction, jdbcType=VARCHAR}</if>
+   	</set>
+   WHERE EMP_NO = #{empNo}
+   </update>
+   
+   <select id="selectLoginMember">
+		SELECT
+		E.EMP_NO,
+		E.EMP_NAME,
+		E.EMP_ID,
+		E.EMP_PW,
+		E.DEPT_CODE,
+		E.POSITION_CODE,
+		E.EMP_EMAIL,
+		E.EMP_NICKNAME,
+		E.EMP_PHONE,
+		TO_CHAR(E.ENROLL_DATE, 'YYYY-MM-DD') AS ENROLL_DATE,
+		E.EMP_DEL_FL,
+		E.INTRODUCTION,
+		E.PROFILE_IMG,
+		P.POSITION_NAME,
+		P.AUTHORITY_LEVEL,
+		D.DEPT_NAME,
+		D.PARENT_DEPT_CODE
+		FROM EMPLOYEE E
+		JOIN POSITION P
+		ON E.POSITION_CODE = P.POSITION_CODE
+		LEFT JOIN DEPARTMENT D
+		ON E.DEPT_CODE = D.DEPT_CODE
+		WHERE E.EMP_NO = #{empNo}
+   </select>
+   
+</mapper>
