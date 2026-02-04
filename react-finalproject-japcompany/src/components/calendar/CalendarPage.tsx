@@ -12,8 +12,8 @@ import { CalendarCategory, ModalState } from './types';
 // =================================================================
 // 0. 설정 및 상수
 // =================================================================
-const API_BASE_URL = "http://localhost/api/calendar";
-const CATEGORY_API_URL = "http://localhost/api/calendar/categories";
+const API_BASE_URL = "/api/calendar";
+const CATEGORY_API_URL = "/api/calendar/categories";
 
 // 🔥 [추가] 회의실 목록 정의 (나중에 DB에서 가져오도록 바꿀 수도 있음)
 const MEETING_ROOMS = [

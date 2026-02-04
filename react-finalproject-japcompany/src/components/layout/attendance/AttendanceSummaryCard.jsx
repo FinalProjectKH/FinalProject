@@ -21,7 +21,7 @@ const AttendanceSummaryCard = () => {
     const fetchSummary = async () => {
       if (!user?.empNo) return;
       try {
-        const response = await axios.get(`http://localhost:80/api/attendance/weekly/${user.empNo}`);
+        const response = await axios.get(`/api/attendance/weekly/${user.empNo}`);
         const data = response.data;
 
         let totalMinutes = 0;

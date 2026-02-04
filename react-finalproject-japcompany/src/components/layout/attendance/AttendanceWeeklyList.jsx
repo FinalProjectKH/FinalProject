@@ -85,7 +85,7 @@ const AttendanceWeeklyList = ({ onPrevWeek, onNextWeek }) => {
 
       const startDate = currentMonday.toISOString().split('T')[0]; // YYYY-MM-DD 형식
       // API 호출 시 startDate 파라미터 전달
-      const response = await axios.get(`http://localhost:80/api/attendance/weekly/${user.empNo}?startDate=${startDate}`);
+      const response = await axios.get(`/api/attendance/weekly/${user.empNo}?startDate=${startDate}`);
       const data = response.data;
       const newRecords = {};
 

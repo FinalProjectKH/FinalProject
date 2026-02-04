@@ -12,6 +12,7 @@ const PRESET_COLORS = [
   "#607d8b", "#333333"             // 회색, 검정
 ];
 
+
 interface SidebarGroupProps {
   title: string;
   GroupId: string;
@@ -298,7 +299,7 @@ export default function CalendarSidebar({
     if (!inputYear) return; 
 
     // 주의: Controller 주소와 똑같이 맞춰야 함
-    axios.post(`http://localhost/api/calendar/holidays/sync?year=${inputYear}`)
+    axios.post(`/api/calendar/holidays/sync?year=${inputYear}`)
       .then((res) => {
         alert(res.data); 
         window.location.reload(); // 화면 새로고침해서 빨간 날 표시
