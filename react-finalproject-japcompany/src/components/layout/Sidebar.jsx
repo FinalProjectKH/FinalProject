@@ -10,6 +10,7 @@ import {
   MessageSquareText,
   Settings,
   Shield,
+  ClipboardList,
 } from "lucide-react";
 
 const Sidebar = () => {
@@ -19,6 +20,7 @@ const Sidebar = () => {
   const user = useAuthStore((s) => s.user);
 
   const isAdmin = user?.authorityLevel === 3;
+  const isManager = user?.authorityLevel >= 2;
 
 
   return (
@@ -54,6 +56,13 @@ const Sidebar = () => {
               to="/admin"                 // 원하는 관리자 페이지 라우트
               icon={<Shield size={18} />} // 아이콘 취향대로
               label="관리자 페이지"
+            />
+          )}
+          {isManager && (
+            <MenuItem
+              to="/boardAdmin"                 
+              icon={<ClipboardList size={18} />} 
+              label="게시판 관리"
             />
           )}
 
