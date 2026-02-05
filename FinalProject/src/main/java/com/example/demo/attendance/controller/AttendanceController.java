@@ -64,7 +64,7 @@ public class AttendanceController {
 	        return ResponseEntity.ok(updateList);
 	        
 	    } catch (RuntimeException e) {
-	        // 메시지에 "네트워크"라는 말이 포함되어 있으면 403, 아니면 400을 주자!
+	        // 메시지에 "네트워크"라는 말이 포함되어 있으면 403, 아니면 400을 전달
 	        if (e.getMessage().contains("네트워크")) {
 	            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
 	        }
