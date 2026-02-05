@@ -15,7 +15,7 @@ const AttendanceLayout = () => {
 
     try {
       // 1. 백엔드 호출
-      const response = await axios.post('http://localhost:80/api/attendance/check-in', {
+      const response = await axios.post('/api/attendance/check-in', {
         empNo: user.empNo
       });
 
@@ -72,7 +72,7 @@ const AttendanceLayout = () => {
 
     try {
       // 퇴근도 JSON 객체 형식으로 보내는 것이 서버(Spring)에서 받기 편해!
-      const response = await axios.post('http://localhost:80/api/attendance/check-out', {
+      const response = await axios.post('/api/attendance/check-out', {
         empNo: user.empNo
       });
 
