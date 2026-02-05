@@ -1,5 +1,6 @@
 package com.example.demo.approval.model.dto;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import lombok.AllArgsConstructor;
@@ -48,10 +49,13 @@ public class ApprovalDto {
 	// ---------------------------------------------- //
 	/*APPROVAL_EXPENSE TABLE*/
 	
-	private String expenseDate;   // 예산 희망일 ex) 202602
 	private int totalAmount;      // 총 신청 금액
-	private String accountCode;   // 예산 과목 코드
-	private String expenseReason; // 신청 사유
+	private String detailNo;   // 상세 고유 번호 (seq)
+	private LocalDateTime expenseDate; // 사용 일자
+	private String category; // 분류
+	private String usageDetail; // 사용내역
+	private int amount; // 개별 금액
+	private String note; // 비고
 	
 	// ---------------------------------------------- //
 	/*APPROVAL_LINE TABLE*/
