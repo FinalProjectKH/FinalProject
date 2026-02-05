@@ -33,6 +33,9 @@ export default function ApprovalWrite() {
   // 결재선 핸들러
   const handleLineSave = (lines) => {
     setApprovalLines(lines);
+    setFormData(prev => (
+      { ...prev, approvalLines: lines}
+    ));
   }
 
   // 2. 현재 양식에 맞는 컴포넌트 선택
@@ -40,13 +43,13 @@ export default function ApprovalWrite() {
     switch(formId) {
       case 'vacation': 
         // return <VacationForm data={formData} onChange={handleChange} />;
-        return <VacationForm data={formData} onChange={handleChange} />;
+        return <VacationForm data={formData} onChange={handleChange} approvalLines={approvalLines}/>;
       case 'expense': 
         // return <ExpenseForm data={formData} onChange={handleChange} />;
-        return <ExpenseForm data={formData} onChange={handleChange} />;
+        return <ExpenseForm data={formData} onChange={handleChange} approvalLines={approvalLines}/>;
       default: 
         // 기본 기안서 
-        return <GeneralForm data={formData} onChange={handleChange} />;
+        return <GeneralForm data={formData} onChange={handleChange} approvalLines={approvalLines}/>;
     }
   };
 

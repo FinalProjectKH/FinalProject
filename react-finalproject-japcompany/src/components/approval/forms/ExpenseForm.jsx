@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
 
-export default function ExpenseForm({ data, onChange }) {
+// props에 approvalLines 추가
+export default function ExpenseForm({ data, onChange, approvalLines = [] }) {
   // 오늘 날짜
   const today = new Date().toLocaleDateString('ko-KR', {
     year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short'
   });
+
+  // 🔥 결재선 빈칸 채우기 로직
+  const maxApprovers = 3;
+  const displayLines = [...approvalLines];
+  while (displayLines.length < maxApprovers) {
+    displayLines.push(null);
+  }
 
   // =========================================================================
   // 1. 동적 행 관리 (스크립트 로직 대체)
   // =========================================================================
   
   // 초기 행 데이터 (기본 1줄)
-  const initialRow = { date: '', category: '물품구입비', usage: '', amount: 0, note: '' };
+  const initialRow = { date: '', category: '물품구입비', usage: '', amount: 0, note: '', id: Date.now() };
   
   // 행 상태 관리
   const [rows, setRows] = useState([ { ...initialRow, id: Date.now() } ]);
@@ -60,64 +68,81 @@ export default function ExpenseForm({ data, onChange }) {
   return (
     <div className="p-4 bg-white" style={{ fontFamily: '"맑은 고딕", "Malgun Gothic", sans-serif' }}>
       
-      {/* 1. 상단 타이틀 및 결재선 테이블 (기존 유지) */}
-      <table style={{ border: "0px", width: "800px", borderCollapse: "collapse", margin: "0 auto" }}>
+      {/* 1. 상단 타이틀 및 결재선 테이블 */}
+      <table style={{ border: "0px solid black", width: "800px", borderCollapse: "collapse", margin: "0 auto" }}>
         <colgroup>
           <col width="310" />
           <col width="490" />
         </colgroup>
         <tbody>
           <tr>
-            <td colSpan={2} style={{ height: "60px", textAlign: "center", fontSize: "25px", fontWeight: "bold", padding: "0px" }}>
+            <td colSpan={2} style={{ height: "70px", textAlign: "center", fontSize: "36px", fontWeight: "bold", padding: "10px" }}>
               법인카드 지출결의서
             </td>
           </tr>
           <tr>
             {/* 왼쪽: 기본 정보 */}
-            <td style={{ verticalAlign: "top" }}>
+            <td style={{ verticalAlign: "top", padding: 0 }}>
               <table style={{ border: "1px solid black", width: "100%", borderCollapse: "collapse" }}>
-                <colgroup><col width="90" /><col width="220" /></colgroup>
+                <colgroup><col width="100" /><col /></colgroup>
                 <tbody>
                   <tr>
-                    <td style={styles.labelCell}>기안자</td>
-                    <td style={styles.valueCell}>김사원</td>
+                    <td style={{ background: "#ddd", padding: "5px", border: "1px solid black", fontWeight: "bold", textAlign: "center" }}>기안자</td>
+                    <td style={{ padding: "5px", border: "1px solid black" }}>김사원</td>
                   </tr>
                   <tr>
-                    <td style={styles.labelCell}>소 속</td>
-                    <td style={styles.valueCell}>개발팀</td>
+                    <td style={{ background: "#ddd", padding: "5px", border: "1px solid black", fontWeight: "bold", textAlign: "center" }}>소 속</td>
+                    <td style={{ padding: "5px", border: "1px solid black" }}>개발팀</td>
                   </tr>
                   <tr>
-                    <td style={styles.labelCell}>기안일</td>
-                    <td style={styles.valueCell}>{today}</td>
+                    <td style={{ background: "#ddd", padding: "5px", border: "1px solid black", fontWeight: "bold", textAlign: "center" }}>기안일</td>
+                    <td style={{ padding: "5px", border: "1px solid black" }}>{today}</td>
                   </tr>
                   <tr>
-                    <td style={styles.labelCell}>문서번호</td>
-                    <td style={styles.valueCell}>자동채번</td>
+                    <td style={{ background: "#ddd", padding: "5px", border: "1px solid black", fontWeight: "bold", textAlign: "center" }}>문서번호</td>
+                    <td style={{ padding: "5px", border: "1px solid black" }}>자동채번</td>
                   </tr>
                 </tbody>
               </table>
             </td>
-            {/* 오른쪽: 결재선 */}
-            <td style={{ textAlign: "right", verticalAlign: "top", paddingLeft: "10px" }}>
-               {/* 결재선 UI (VacationForm과 동일) */}
+
+            {/* 🔥 오른쪽: 결재선 (동적 렌더링 적용) */}
+            <td style={{ textAlign: "right", verticalAlign: "bottom", paddingLeft: "10px" }}>
                <div style={{ display: "inline-flex", border: "1px solid black" }}>
+                {/* 세로 '결재' */}
                 <div style={{ width: "20px", background: "#f3f3f3", borderRight: "1px solid black", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", padding: "5px" }}>결<br/>재</div>
+                
                 <div style={{ display: "flex" }}>
+                  {/* 기안자 (고정) */}
                   <div style={{ width: "80px", borderRight: "1px solid black", display: "flex", flexDirection: "column" }}>
-                     <div style={{ background: "#f3f3f3", borderBottom: "1px solid black", textAlign: "center", padding: "2px" }}>담당</div>
-                     <div style={{ height: "60px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}>김사원</div>
-                     <div style={{ borderTop: "1px solid black", fontSize: "11px", textAlign: "center", background: "#f9f9f9" }}>상신</div>
+                     <div style={styles.signHeader}>담당</div>
+                     <div style={styles.signName}>김사원</div>
+                     <div style={styles.signStatus}>기안</div>
                   </div>
-                  <div style={{ width: "80px", borderRight: "1px solid black", display: "flex", flexDirection: "column" }}>
-                     <div style={{ background: "#f3f3f3", borderBottom: "1px solid black", textAlign: "center", padding: "2px" }}>팀장</div>
-                     <div style={{ height: "60px" }}></div>
-                     <div style={{ borderTop: "1px solid black", fontSize: "11px", textAlign: "center", background: "#f9f9f9" }}></div>
-                  </div>
-                  <div style={{ width: "80px", display: "flex", flexDirection: "column" }}>
-                     <div style={{ background: "#f3f3f3", borderBottom: "1px solid black", textAlign: "center", padding: "2px" }}>부장</div>
-                     <div style={{ height: "60px" }}></div>
-                     <div style={{ borderTop: "1px solid black", fontSize: "11px", textAlign: "center", background: "#f9f9f9" }}></div>
-                  </div>
+
+                  {/* 결재자들 (동적) */}
+                  {displayLines.map((approver, index) => (
+                    <div 
+                      key={index} 
+                      style={{ 
+                        width: "80px", 
+                        // 마지막 칸은 오른쪽 테두리 제거
+                        borderRight: index === maxApprovers - 1 ? "none" : "1px solid black", 
+                        display: "flex", 
+                        flexDirection: "column" 
+                      }}
+                    >
+                       <div style={styles.signHeader}>
+                         {approver ? approver.rank : ''}
+                       </div>
+                       <div style={styles.signName}>
+                         {approver ? approver.name : ''}
+                       </div>
+                       <div style={styles.signStatus}>
+                         {approver ? '미결' : ''}
+                       </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </td>
@@ -125,7 +150,7 @@ export default function ExpenseForm({ data, onChange }) {
         </tbody>
       </table>
 
-      {/* 2. 상세 입력 테이블 (헤더 정보) */}
+      {/* 2. 상세 입력 테이블 */}
       <table style={{ border: "2px solid black", width: "800px", borderCollapse: "collapse", marginTop: "20px", margin: "20px auto" }}>
         <colgroup>
           <col width="100" />
@@ -166,7 +191,7 @@ export default function ExpenseForm({ data, onChange }) {
         </tbody>
       </table>
 
-      {/* 3. 동적 지출 내역 테이블 (스크립트 부분 리액트화) */}
+      {/* 3. 동적 지출 내역 테이블 */}
       <div style={{ width: "800px", margin: "0 auto" }}>
         {/* 버튼 영역 */}
         <div style={{ textAlign: "right", marginBottom: "5px" }}>
@@ -247,5 +272,10 @@ const styles = {
   input: { width: "100%", border: "none", outline: "none", background: "transparent", fontSize: "12px" },
   th: { background: "#ddd", border: "1px solid black", padding: "5px", textAlign: "center", fontWeight: "bold", fontSize: "12px" },
   td: { border: "1px solid black", padding: "5px", fontSize: "12px" },
-  button: { padding: "3px 8px", background: "#333", color: "white", border: "none", borderRadius: "3px", cursor: "pointer", fontSize: "11px" }
+  button: { padding: "3px 8px", background: "#333", color: "white", border: "none", borderRadius: "3px", cursor: "pointer", fontSize: "11px" },
+  
+  // 🔥 결재선 전용 스타일 (추가됨)
+  signHeader: { background: "#f3f3f3", borderBottom: "1px solid black", textAlign: "center", padding: "2px", fontSize: "12px", height: "23px" },
+  signName: { height: "60px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "13px" },
+  signStatus: { borderTop: "1px solid black", fontSize: "11px", textAlign: "center", background: "#f9f9f9", height: "17px" }
 };
