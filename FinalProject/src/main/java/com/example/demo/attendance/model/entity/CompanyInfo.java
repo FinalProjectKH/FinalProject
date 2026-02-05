@@ -29,6 +29,6 @@ public class CompanyInfo {
     private String updatingEmpNo;
 
     @Column(name = "MODIFY_DT")
-    private String modifyDt;
+    private LocalDate modifyDt;
 
 }

@@ -64,9 +64,12 @@ public class AttendanceController {
 	        return ResponseEntity.ok(updateList);
 	        
 	    } catch (RuntimeException e) {
-	        // IP 불일치 혹은 이미 출근한 경우 등 서비스에서 던진 예외 처리
-	        // 403 Forbidden: 권한 없음(IP 오류) 혹은 상황에 맞는 에러 메시지 반환
-	        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+	        // 메시지에 "네트워크"라는 말이 포함되어 있으면 403, 아니면 400을 전달
+	        if (e.getMessage().contains("네트워크")) {
+	            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+	        }
+	        return ResponseEntity.badRequest().body(e.getMessage()); // 400 에러
+	        
 	    } catch (Exception e) {
 	        // 예상치 못한 기타 서버 에러 처리
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 오류가 발생했습니다.");
