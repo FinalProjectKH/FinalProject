@@ -33,19 +33,21 @@ const AttendanceLayout = () => {
         const status = error.response.status;
         const errorMessage = error.response.data;
 
+        // 1. 보안 에러 (403)
         if (status === 403) {
-          // 보안상 상세 IP 노출 대신 친절한 안내 문구 출력
-          alert("🚫 출근 실패: 사내 지정 네트워크가 아닙니다. 사무실 Wi-Fi 연결을 확인해 주세요.");
-        } else if (status === 400) {
-          // 이미 출근했거나 데이터 오류인 경우 (백엔드에서 보낸 메시지 활용)
+          alert(`🚫 보안 알림: ${errorMessage}`);
+        }
+        // 2. 비즈니스 로직 에러 (400 - 이미 출근함 등)
+        else if (status === 400) {
           alert(`⚠️ 알림: ${errorMessage}`);
-        } else {
-          // 기타 서버 에러 (500 등)
+        }
+        // 3. 기타 서버 에러 (500 등)
+        else {
           alert("서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
         }
       } else {
-        // 서버가 꺼져있거나 인터넷 연결 자체가 끊긴 경우
-        alert("서버와 통신할 수 없습니다. 네트워크 연결 상태를 확인하거나 관리자에게 문의하세요.");
+        // 4. 네트워크 연결 자체가 끊긴 경우
+        alert("⚠️ 서버와 통신할 수 없습니다. 네트워크 연결 상태를 확인해 주세요.");
       }
     }
   };
