@@ -1,6 +1,7 @@
 import {NavLink} from "react-router-dom";
 import { useState } from "react";
 import { ActiveOrg } from "../org/orgTree";
+import { useAuthStore } from "../../store/authStore";
 import {
   Clock3,
   FileCheck2,
@@ -8,11 +9,17 @@ import {
   Mail,
   MessageSquareText,
   Settings,
+  Shield,
 } from "lucide-react";
 
 const Sidebar = () => {
   const [orgOpen, setOrgOpen] = useState(false);
   const [orgPos, setOrgPos] = useState({ x: 250, y: 200 });
+
+  const user = useAuthStore((s) => s.user);
+
+  const isAdmin = user?.authorityLevel === 3;
+
 
   return (
   <>
@@ -41,6 +48,15 @@ const Sidebar = () => {
 
         {/* bottom */}
         <div className="mt-auto px-5 pb-6">
+          {/* ✅ 관리자일 때만 하단에 노출 */}
+          {isAdmin && (
+            <MenuItem
+              to="/admin"                 // 원하는 관리자 페이지 라우트
+              icon={<Shield size={18} />} // 아이콘 취향대로
+              label="관리자 페이지"
+            />
+          )}
+
           <button className="group w-full flex items-center gap-3 rounded-xl px-3 py-3 text-white/80 hover:bg-white/10 transition">
             <Settings size={18} className="text-white/80" />
             <span className="text-sm">설정</span>
