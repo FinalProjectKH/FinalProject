@@ -76,4 +76,10 @@
 		WHERE E.EMP_NO = #{empNo}
    </select>
    
+   <update id="updateProfileImg">
+   UPDATE "EMPLOYEE" SET
+   PROFILE_IMG = #{webPath}
+   WHERE EMP_NO = #{empNo}
+   </update>
+   
 </mapper>

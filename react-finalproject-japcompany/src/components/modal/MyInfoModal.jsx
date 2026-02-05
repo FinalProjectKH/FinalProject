@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import DraggableModal from "./DraggableModal";
 import { axiosApi } from "../../api/axiosAPI";
 import { useAuthStore } from "../../store/authStore";
+import { useOrgStore } from "../../store/orgStore";
 import { Pencil, Save, Undo2, ImageUp } from "lucide-react";
 const userDefaultImg = "/image/user.png"
 
@@ -18,16 +19,18 @@ const userDefaultImg = "/image/user.png"
  */
 const API = {
   UPDATE_PROFILE: "/mypage/profile", // PUT: {empEmail, empNickname, empPhone, introduction}
-  UPLOAD_IMAGE: "/mypage/profile-image", // PUT multipart: profileImage
+  UPLOAD_IMAGE: "/mypage/profileImg", // PUT multipart: profileImage
 };
 
 const MyInfoModal=({ open, onClose }) => {
+  const refreshOrgTree = useOrgStore((s) => s.refreshOrgTree);
+
   const [previewImg, setPreviewImg] = useState(null);
   const [pickedFile, setPickedFile] = useState(null);
 
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
-
+  
   const [edit, setEdit] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -43,12 +46,22 @@ const MyInfoModal=({ open, onClose }) => {
 
   const fileRef = useRef(null);
 
-  // 모달 열릴 때 draft 초기화
-  useEffect(() => {
-    if (!open) return;
-    setMsg({ type: "", text: "" });
-    setEdit(false);
 
+  useEffect(() => {
+    //닫힐 때 초기화
+    if (!open) {
+        setMsg({ type: "", text: "" });
+        setEdit(false);
+
+        setPreviewImg(null);
+        setPickedFile(null);
+
+        // file input 값도 초기화 (같은 파일 다시 선택 이슈까지 깔끔)
+        if (fileRef.current) fileRef.current.value = "";
+        return;
+    }
+    
+    // 모달 열릴 때 draft 초기화
     if (user) {
       setDraft({
         empEmail: user.empEmail ?? "",
@@ -175,39 +188,71 @@ const MyInfoModal=({ open, onClose }) => {
     }
     return "";
   };
+ 
+  //슬레이트
 
   const onSave = async () => {
+
     if (!window.confirm("수정하시겠습니까?")) return;
     if (!user) return;
 
     setMsg({ type: "", text: "" });
 
     const payload = buildPayload();
-    const keys = Object.keys(payload);
+    const hasProfileTextChange = Object.keys(payload).length > 0;
 
-    if (keys.length === 0) {
+      // 2) 이미지 선택 여부
+    const hasImageChange = !!pickedFile;
+  
+    if (!hasProfileTextChange && !hasImageChange) {
       setMsg({ type: "info", text: "변경된 내용이 없습니다." });
       setEdit(false);
       return;
     }
 
-    const errMsg = validatePayload(payload);
-    if (errMsg) {
-      setMsg({ type: "error", text: errMsg });
-      return;
+    if (hasProfileTextChange) {
+        const errMsg = validatePayload(payload);
+        if (errMsg) {
+          setMsg({ type: "error", text: errMsg });
+          return;
+        }
     }
+
 
     setSaving(true);
     try {
-      const res = await axiosApi.put(API.UPDATE_PROFILE, payload);
+        let latestUser = user;
+    
+        // ✅ (A) 텍스트 먼저 저장
+        if (hasProfileTextChange) {
+          const res = await axiosApi.put(API.UPDATE_PROFILE, payload);
+          latestUser = res.data || { ...latestUser, ...payload };
+        }
+    
+        // ✅ (B) 이미지 업로드도 같이
+        if (hasImageChange) {
+          setUploading(true);
+          try {
+            const form = new FormData();
+            // 서버 파라미터명이 profileImage라고 가정
+            form.append("profileImg", pickedFile);
+    
+            const resImg = await axiosApi.put(API.UPLOAD_IMAGE, form, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
 
-      // 서버가 갱신된 user를 반환한다는 가정
-      const updated = res.data;
-      if (updated) setUser(updated);
-      else {
-        // 만약 서버가 user를 안 내려주면, 최소한 draft를 auth user에 합치기(임시)
-        setUser({ ...user, ...payload });
-      }
+            if (resImg.data) latestUser = resImg.data;
+          } finally {
+            setUploading(false);
+          }
+        }
+
+      // ✅ [핵심 수정] 모든 작업 완료 후 상태 정리
+      setUser(latestUser);      // 전역 상태(authStore) 갱신
+      refreshOrgTree();
+      setPickedFile(null);      // 선택된 파일 객체 삭제
+      setPreviewImg(null);      // 🌟 미리보기 삭제 (이제 user.profileImg를 보게 됨)
+
 
       setMsg({ type: "success", text: "저장되었습니다." });
       setEdit(false);
@@ -229,7 +274,7 @@ const MyInfoModal=({ open, onClose }) => {
       draft.introduction !== user.introduction ||
       pickedFile !== null
     );
-    }, [draft, user, previewImg]);
+    }, [draft, user, pickedFile]);
 
 
   return (
