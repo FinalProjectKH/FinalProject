@@ -1,11 +1,15 @@
 package com.example.demo.mypage.controller;
 
+import java.io.IOException;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.employee.model.dto.Employee;
 import com.example.demo.employee.model.dto.LoginMemberDTO;
@@ -36,6 +40,29 @@ public class MypageController {
         session.setAttribute("loginMember", result);
 		
 		return ResponseEntity.ok(result) ;
+	}
+	
+	@PutMapping("profileImg")
+	public ResponseEntity<LoginMemberDTO> updateProfileImg ( @RequestPart("profileImg") MultipartFile file, HttpSession session) throws IOException{
+		
+		LoginMemberDTO loginMember = (LoginMemberDTO)session.getAttribute("loginMember");
+			if(loginMember == null) {
+				return ResponseEntity.status(401).build();
+			}
+		
+		//파일 없음
+		if (file == null || file.isEmpty()) {
+		    return ResponseEntity.badRequest().build();
+		}
+		
+		//이미지 파일만 업로드 가능
+		String type = file.getContentType();
+		if (type == null || !type.startsWith("image/")) {
+		    return ResponseEntity.badRequest().build();
+		}
+		LoginMemberDTO result = service.updateProfileImg(loginMember, file);
+		
+		return ResponseEntity.ok(result);
 	}
 	
 }

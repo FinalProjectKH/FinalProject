@@ -1,8 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
-
-// https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   // 현재 모드(development 등)에 맞는 .env 파일을 불러옵니다.
   const env = loadEnv(mode, process.cwd(), '');
@@ -10,6 +8,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
+      host: true,//내 PC 말고 다른 PC도 접속 가능
       proxy: {
         // '/employee' 로 시작하는 요청은 target으로 보냄
         "/employee": {
@@ -21,6 +20,10 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
         "/mypage": {
+          target: env.VITE_BASE_URL || 'http://localhost',
+          changeOrigin: true,
+        },
+        "/myPage": {
           target: env.VITE_BASE_URL || 'http://localhost',
           changeOrigin: true,
         },
