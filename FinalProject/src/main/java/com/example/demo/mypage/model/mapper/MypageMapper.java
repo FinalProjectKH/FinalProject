@@ -1,6 +1,7 @@
 package com.example.demo.mypage.model.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import com.example.demo.employee.model.dto.Employee;
 import com.example.demo.employee.model.dto.LoginMemberDTO;
@@ -13,5 +14,7 @@ public interface MypageMapper {
 	int updateEmployee(Employee update);
 
 	LoginMemberDTO selectLoginMember(String empNo);
+
+	void updateProfileImg( @Param("empNo") String empNo, @Param("webPath") String webPath);
 
 }

@@ -48,6 +48,9 @@ export const useOrgStore = create((set,get)=>({
             set({ loading: false });
         }
     },
+    refreshOrgTree: async () => {
+        await get().fetchOrgTree(true);
+    },
 
 
     //2.  nomalize(정규화)  => 즉시 참조를 위함-----------------------------
@@ -117,6 +120,7 @@ export const useOrgStore = create((set,get)=>({
                 empName: item.empName,
                 empEmail: item.empEmail,
                 empPhone: item.empPhone,
+                profileImg: item.profileImg,
 
                 deptCode: item.deptCode,
                 deptName: item.deptName,

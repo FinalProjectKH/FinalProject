@@ -1,7 +1,13 @@
 // components/org/EmployeeModal.jsx
 import { X } from "lucide-react";
+import { useAuthStore } from "../../store/authStore";
+
+const userDefaultImg = "/image/user.png"
+
 
 const EmployeeModal = ({ open, onClose, employee }) => {
+  const user = useAuthStore((state) => state.user );
+
   if (!open || !employee) return null;
 
   const {
@@ -12,6 +18,7 @@ const EmployeeModal = ({ open, onClose, employee }) => {
     deptName,
     profileImg,
   } = employee;
+  const imgSrc = employee.profileImg || userDefaultImg;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -28,14 +35,12 @@ const EmployeeModal = ({ open, onClose, employee }) => {
         <div className="p-4 space-y-4">
           {/* profile */}
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-gray-200 overflow-hidden">
-              {profileImg && (
+            <div className="w-14 h-14 rounded-[13px] bg-gray-200 overflow-hidden">
                 <img
-                  src={profileImg}
+                  src={imgSrc}
                   alt="profile"
                   className="w-full h-full object-cover"
                 />
-              )}
             </div>
             <div>
               <div className="font-semibold">{empName}</div>
