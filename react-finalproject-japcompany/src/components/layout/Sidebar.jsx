@@ -2,6 +2,7 @@ import {NavLink} from "react-router-dom";
 import { useState } from "react";
 import { ActiveOrg } from "../org/orgTree";
 import { useAuthStore } from "../../store/authStore";
+import AdminDropupMenu from "../modal/admin/AdminDropupMenu"
 import {
   Clock3,
   FileCheck2,
@@ -15,7 +16,13 @@ import {
 
 const Sidebar = () => {
   const [orgOpen, setOrgOpen] = useState(false);
+  const [AdminOpen, setAdminOpen] = useState(false);
   const [orgPos, setOrgPos] = useState({ x: 250, y: 200 });
+
+  const [hrOpen, setHrOpen] = useState(false);
+  const [ipOpen, setIpOpen] = useState(false);
+  const onClose  =()=> setAdminOpen(false);
+
 
   const user = useAuthStore((s) => s.user);
 
@@ -52,12 +59,23 @@ const Sidebar = () => {
         <div className="mt-auto px-5 pb-6">
           {/* ✅ 관리자일 때만 하단에 노출 */}
           {isAdmin && (
+            <div className="relative">
             <MenuItem
-              to="/admin"                 // 원하는 관리자 페이지 라우트
               icon={<Shield size={18} />} // 아이콘 취향대로
-              label="관리자 페이지"
+              label="관리자"
+              onClick={(e) => {
+                setAdminOpen(prev => !prev)
+                e.stopPropagation();
+              }}
             />
+            {AdminOpen && (
+             <div className="absolute left-0 right-0 bottom-full mb-2 z-50">
+               <AdminDropupMenu  onClose = { onClose } canHr = {isAdmin} canIp = {isManager}/>
+             </div>
+             )}
+            </div>
           )}
+
           {isManager && (
             <MenuItem
               to="/boardAdmin"                 
@@ -115,6 +133,8 @@ const Sidebar = () => {
           </div>
         </div>
       )}
+
+
    </> 
   );
 };
