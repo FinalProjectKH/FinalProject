@@ -18,7 +18,7 @@ export default function AdminDropupMenu({
 
     const onDown = (e) => {
       if (!wrapRef.current) return;
-      if (!wrapRef.current.contains(e.target)) onClose();
+      if (!wrapRef.current.contains(e.target)) onClose?.();
     };
     const onKey = (e) => {
       if (e.key === "Escape") onClose();
@@ -54,7 +54,7 @@ export default function AdminDropupMenu({
               type="button"
               className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/10 transition"
               onClick={() => {
-                onClose();
+                onClose?.();
                 onOpenHr?.();
               }}
             >

@@ -13,10 +13,12 @@ import {
   Shield,
   ClipboardList,
 } from "lucide-react";
+import HrEmployeeModal from "../modal/admin/HrEmployeeModal";
+import DraggableModal from "../modal/DraggableModal";
 
 const Sidebar = () => {
   const [orgOpen, setOrgOpen] = useState(false);
-  const [AdminOpen, setAdminOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const [orgPos, setOrgPos] = useState({ x: 250, y: 200 });
 
   const [hrOpen, setHrOpen] = useState(false);
@@ -59,6 +61,7 @@ const Sidebar = () => {
         <div className="mt-auto px-5 pb-6">
           {/* ✅ 관리자일 때만 하단에 노출 */}
           {isAdmin && (
+
             <div className="relative">
             <MenuItem
               icon={<Shield size={18} />} // 아이콘 취향대로
@@ -68,13 +71,34 @@ const Sidebar = () => {
                 e.stopPropagation();
               }}
             />
-            {AdminOpen && (
+
+            {adminOpen && (
+            
              <div className="absolute left-0 right-0 bottom-full mb-2 z-50">
-               <AdminDropupMenu  onClose = { onClose } canHr = {isAdmin} canIp = {isManager}/>
-             </div>
+               <AdminDropupMenu  
+               onClose = { onClose } 
+               canHr = {isAdmin} 
+               canIp = {isManager}
+               onOpenHr={()=>{
+                setHrOpen(true);
+                setAdminOpen(false);
+              }}
+               />
+              </div>
+
+
+
              )}
-            </div>
+            </div> 
           )}
+
+
+         <HrEmployeeModal
+            open={hrOpen}
+            onClose={() => setHrOpen(false)}
+          />
+
+              
 
           {isManager && (
             <MenuItem

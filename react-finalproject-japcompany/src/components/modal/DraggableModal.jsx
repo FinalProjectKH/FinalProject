@@ -1,8 +1,11 @@
 // src/components/modal/DraggableModal.jsx
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
+import { createPortal } from "react-dom";
 
 const MARGIN = 16;
+
+let Z = 1000; // 모듈 스코프
 
 const DraggableModal = ({
   open,
@@ -12,6 +15,7 @@ const DraggableModal = ({
   height = 620,
   children,
 }) => {
+  const [zIndex, setZIndex] = useState(0);
   const modalRef = useRef(null);
 
   /* ===== position ===== */
@@ -26,9 +30,18 @@ const DraggableModal = ({
     baseY: 0,
   });
 
+    useEffect(() => {
+    if (open) setZIndex(++Z);
+  }, [open]);
+
+
+
   /* ===== center on open ===== */
   useLayoutEffect(() => {
     if (!open) return;
+  
+
+
 
     const el = modalRef.current;
     if (!el) return;
@@ -101,18 +114,13 @@ const DraggableModal = ({
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-[999]">
-      {/* dim */}
-      {/* <button
-        className="absolute inset-0 bg-black/35"
-        onClick={onClose}
-        aria-label="close"
-      /> */}
+  return createPortal(
+    <div className="fixed inset-0" style={{ zIndex }}>
 
       {/* modal */}
       <section
         ref={modalRef}
+        onMouseDown={() => setZIndex(++Z)}
         className="
           absolute
           rounded-2xl
@@ -166,7 +174,8 @@ const DraggableModal = ({
           {children}
         </div>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 };
 
