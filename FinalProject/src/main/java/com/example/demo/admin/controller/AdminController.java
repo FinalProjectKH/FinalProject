@@ -1,7 +1,11 @@
 package com.example.demo.admin.controller;
 
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,5 +44,17 @@ public class AdminController {
 
 	    if (!ok) return ResponseEntity.status(401).build();
 	    return ResponseEntity.ok().build();
+	}
+	
+	//부서 전체 조회
+	@GetMapping("fetchDeptList")
+	public ResponseEntity<List<Map<String, Object>>> fetchDeptList(){
+		return ResponseEntity.ok(service.fetchDeptList());
+	}
+	
+	//직급 전체 조회
+	@GetMapping("fetchPositionList")
+	public ResponseEntity<List<Map<String, Object>>> fetchPositionList(){
+		return ResponseEntity.ok(service.fetchPositionList());
 	}
 }

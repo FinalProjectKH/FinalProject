@@ -1,5 +1,9 @@
 package com.example.demo.admin.modal.service;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +41,18 @@ public class AdminServiceImpl implements AdminService{
 		log.info("비밀번호 해시 조회 성공!!" );
 
 		return true;
+	}
+	
+	//부서 전체 조회
+	@Override
+	public List<Map<String, Object>> fetchDeptList() {
+		return mapper.fetchDeptList();
+	}
+	
+	//직급 전체 조회
+	@Override
+	public List<Map<String, Object>> fetchPositionList() {
+		return mapper.fetchPositionList();
 	}
 
 }

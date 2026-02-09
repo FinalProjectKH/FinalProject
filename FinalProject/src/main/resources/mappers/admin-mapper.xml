@@ -8,4 +8,14 @@
    WHERE EMP_NO =#{empNo}
    </select>
    
+   <select id="fetchDeptList" resultType="map">
+   SELECT DEPT_CODE AS deptCode, DEPT_NAME AS deptName
+   FROM DEPARTMENT
+   </select>
+   
+   <select id="fetchPositionList" resultType="map">
+   SELECT POSITION_CODE AS positionCode, POSITION_NAME AS positionName
+   FROM POSITION
+   </select>
+   
 </mapper>

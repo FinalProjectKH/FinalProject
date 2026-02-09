@@ -5,7 +5,7 @@
 // - 우측: 증명사진 + 전체 조회(읽기 전용)
 // - 하단: 사원 추가(이름/아이디/부서명/직급명) + 관리자 비번 확인 + 임시비번 1회 표시
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DraggableModal from "../DraggableModal";
 import {
   Save,
@@ -37,6 +37,10 @@ const getModalRoot = () => {
 }
 
 export default function HrEmployeeModal({ open, onClose }) {
+  //부서 / 직급 조회
+  const [deptOptions, setDeptOptions] = useState([]);  
+  const [positionOptions, setPositionOptions] = useState([]);  
+  /*관리자 비번 조회 중 에러 */   
   const [adminPwErr, setAdminPwErr] = useState("");
   /* ===== 검색/조회 ===== */
   const [keyword, setKeyword] = useState("");
@@ -45,6 +49,40 @@ export default function HrEmployeeModal({ open, onClose }) {
   const [results, setResults] = useState([]); // 리스트용 (간단 필드)
   // 결과 예시: { empNo, empName, empId, deptName, positionName, empDelFl, profileImg }
   const [selectedEmpNo, setSelectedEmpNo] = useState(null);
+
+  //부서 / 직급 조회
+  useEffect(()=>{
+    if (!open) return;
+
+    setDeptOptions([]);
+    setPositionOptions([]);
+
+    const fetchDeptList =async()=> {
+        const res = await axiosApi.get("/admin/fetchDeptList");
+        // 데이터를 소문자로 변환해서 저장
+        const formatted = res.data.map(item => ({
+          deptCode: item.DEPTCODE,
+          deptName: item.DEPTNAME
+        }));
+        console.log("deptOptions:", res.data); 
+        setDeptOptions(res.data);
+    };
+
+    const fetchPositionList=async()=> {
+        const res =  await axiosApi.get("/admin/fetchPositionList");
+         console.log("positionOptions:", res.data); 
+         // 데이터를 소문자로 변환해서 저장
+        const formatted = res.data.map(item => ({
+          positionCode: item.POSITIONCODE,
+          positionName: item.POSITIONNAME
+        }));
+        setPositionOptions(res.data);
+    };
+
+    fetchDeptList();
+    fetchPositionList();
+
+  },[open]);
 
   const selected = useMemo(() => {
     return results.find((r) => r.empNo === selectedEmpNo) ?? null;
@@ -56,6 +94,8 @@ export default function HrEmployeeModal({ open, onClose }) {
     empId: "",
     deptName: "",
     positionName: "",
+    deptCode: "",
+    positionCode: "",
   });
 
   const [msg, setMsg] = useState({ type: "", text: "" });
@@ -72,8 +112,8 @@ export default function HrEmployeeModal({ open, onClose }) {
     return (
       form.empName.trim().length > 0 &&
       form.empId.trim().length > 0 &&
-      form.deptName.trim().length > 0 &&
-      form.positionName.trim().length > 0
+      form.deptCode.length > 0 &&
+      form.positionCode.length > 0
     );
   }, [form]);
 
@@ -85,15 +125,15 @@ export default function HrEmployeeModal({ open, onClose }) {
     if (id.length < 6 || id.length > 20) return "아이디는 6~20자여야 합니다.";
     if (!/^[a-zA-Z0-9._-]+$/.test(id)) return "아이디는 영문/숫자/._- 만 허용됩니다.";
 
-    if (!form.deptName.trim()) return "부서는 필수입니다.";
-    if (!form.positionName.trim()) return "직급은 필수입니다.";
+    if (!form.deptCode) return "부서는 필수입니다.";
+    if (!form.positionCode) return "직급은 필수입니다.";
 
     return "";
   };
 
   const resetCreateForm = () => {
     setMsg({ type: "", text: "" });
-    setForm({ empName: "", empId: "", deptName: "", positionName: "" });
+    setForm({ empName: "", empId: "", deptCode: "", positionCode: "" });
     setAdminPw("");
     setAdminPwOpen(false);
   };
@@ -201,10 +241,10 @@ export default function HrEmployeeModal({ open, onClose }) {
       const payload = {
         empName: form.empName.trim(),
         empId: form.empId.trim(),
-        deptName: form.deptName.trim(),
-        positionName: form.positionName.trim(),
+        deptCode: form.deptCode,
+        positionCode: form.positionCode,
       }
-    //   const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload);
+      const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload);
 
       /*
      API 
@@ -437,19 +477,35 @@ export default function HrEmployeeModal({ open, onClose }) {
                 placeholder="psh1997"
               />
 
-              <Input
-                label="부서(이름)*"
-                value={form.deptName}
-                onChange={(v) => setForm((p) => ({ ...p, deptName: v }))}
-                placeholder="인사부"
-              />
+              <select
+                key="dept-select"
+                value={form.deptCode}
+                onChange={(e) => setForm((p) => ({ ...p, deptCode: e.target.value }))}
+                  className="rounded-xl border border-white/15 bg-white/10 px-3 py-2
+                             text-[13px] text-black/85 outline-none"
+              >
+                <option key="__placeholder" value="">부서 선택</option>
+                {deptOptions.map(d =>(
+                    <option key={d.DEPTCODE} value={d.DEPTCODE}>
+                        {d.DEPTNAME}
+                    </option>
+                ))}
+              </select>
 
-              <Input
-                label="직급(이름)*"
-                value={form.positionName}
-                onChange={(v) => setForm((p) => ({ ...p, positionName: v }))}
-                placeholder="대리"
-              />
+              <select 
+                key="position-select"         
+                value={form.positionCode}
+                onChange={(e) => setForm((p) => ({ ...p, positionCode: e.target.value }))}
+                className="rounded-xl border border-white/15 bg-white/10 px-3 py-2
+                           text-[13px] text-black/85 outline-none"
+              >  
+                <option key="__empty_position" value="">직급 선택</option>
+                {positionOptions.map(o => (
+                    <option key={o.POSITIONCODE} value={o.POSITIONCODE}>
+                        {o.POSITIONNAME}
+                    </option>
+                ))}
+              </select>
 
               {/* <div className="col-span-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2"> */}
               <div>
@@ -738,10 +794,10 @@ function highlightText(text, keyword) {
   const after = t.slice(idx + k.length);
 
   return (
-    <>
+    <span key={`${t}-${idx}`}>
       {before}
       <mark className="bg-amber-200/70 rounded px-0.5">{mid}</mark>
       {after}
-    </>
+    </span>
   );
 }
