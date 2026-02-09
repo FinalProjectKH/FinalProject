@@ -3,10 +3,10 @@ import { useState } from "react";
 
 const OrgTreeNode = ({ nodeId, depth =0, onOpenEmp }) => {
     const orgMap = useOrgStore((s)=>s.orgMap);
+    const [open, setOpen] = useState(nodeId === "COMPANY");
     const node = orgMap?.[nodeId];
     if(!node) return null;
 
-    const [open, setOpen] = useState(nodeId === "COMPANY");
     const hasChildren = Array.isArray(node.children) && node.children.length > 0;
 
     const canToggle =

@@ -4,6 +4,8 @@ import { Search } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import  MyInfoModal from "../modal/MyInfoModal";
 
+const userDefaultImg = "/image/user.png"
+
 const Header = () => {
   const [openProfile, setOpenProfile] = useState(false);
   const [openMyInfo, setOpenMyInfo] = useState(false);
@@ -41,7 +43,12 @@ const Header = () => {
             </span>
           )}
           </span>
-          <div className="w-10 h-10 rounded-full bg-gray-400 shadow-[0_14px_30px_rgba(0,0,0,0.18)]" />
+          <div className="w-10 h-10 rounded-[10px] bg-wait-400 shadow-[0_14px_30px_rgba(0,0,0,0.18)]" >
+            <img
+              src={user?.profileImg || userDefaultImg}
+              className="w-full h-full rounded-[10px] object-cover"
+            />
+          </div>
         </button>
 
         {/* hamburger */}
