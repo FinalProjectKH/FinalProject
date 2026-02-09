@@ -22,7 +22,7 @@ public class AdminController {
 	
 	private final AdminService service;
 	
-	public record AdminPwRequest(String empPw) {}
+	public record AdminPwRequest(String adminPw) {}
 	
 	@PostMapping("verify-password")
 	public ResponseEntity<Void> verifyPassword(@RequestBody AdminPwRequest req, HttpSession session) {
@@ -33,7 +33,7 @@ public class AdminController {
 	    //권한 레벨 확인
 	    if (loginMember.getAuthorityLevel() < 3) return ResponseEntity.status(403).build();
 	   
-	    String adminPw = req.empPw();
+	    String adminPw = req.adminPw();
 	    if (adminPw == null || adminPw.isBlank()) return ResponseEntity.badRequest().build();
 
 	    boolean ok = service.verifyPassword(loginMember.getEmpNo(), adminPw);

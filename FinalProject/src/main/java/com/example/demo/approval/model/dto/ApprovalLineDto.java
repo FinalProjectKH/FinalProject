@@ -18,5 +18,9 @@ public class ApprovalLineDto {
 	private String appLineStatus; // 결재 처리 상태 (대기 / 승인 / 반려 / 선결 등등)
 	private String appLineDate;   // 결재 처리한 날짜
 	private String rejectReason;  // 반려 사유
+	
+	private String positionName; // 직급명
+	private String deptName; // 부서명
+	private String empName; // 직원명
 
 }

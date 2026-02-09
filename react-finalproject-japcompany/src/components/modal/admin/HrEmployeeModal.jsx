@@ -15,8 +15,9 @@ import {
   UserPlus,
   Search as SearchIcon,
 } from "lucide-react";
-import { axiosApi } from "../../../api/axiosAPI"; // ✅ 실제 연결 시 사용
+import { axiosApi } from "../../../api/axiosAPI"; 
 import { createPortal } from "react-dom";
+
 
 const userDefaultImg = "/image/user.png";
 
@@ -36,6 +37,7 @@ const getModalRoot = () => {
 }
 
 export default function HrEmployeeModal({ open, onClose }) {
+  const [adminPwErr, setAdminPwErr] = useState("");
   /* ===== 검색/조회 ===== */
   const [keyword, setKeyword] = useState("");
   const [includeResigned, setIncludeResigned] = useState(false);
@@ -194,7 +196,7 @@ export default function HrEmployeeModal({ open, onClose }) {
 
     try {
       setMsg({ type: "", text: "" });
-      await axiosApi.post(API.VERIFY_ADMIN_PW, { empPw });
+      await axiosApi.post(API.VERIFY_ADMIN_PW, { adminPw });
 
       const payload = {
         empName: form.empName.trim(),
@@ -202,7 +204,7 @@ export default function HrEmployeeModal({ open, onClose }) {
         deptName: form.deptName.trim(),
         positionName: form.positionName.trim(),
       }
-      const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload);
+    //   const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload);
 
       /*
      API 
@@ -212,17 +214,30 @@ export default function HrEmployeeModal({ open, onClose }) {
      VERIFY_ADMIN_PW: "/admin/verify-password",
       */ 
 
-      setIssued(res.data);
-      setIssuedOpen(true);
+    //   setIssued(res.data);
+    //   setIssuedOpen(true);
 
       setAdminPwOpen(false);
       setAdminPw("");
-      setForm({ empName: "", empId: "", deptName: "", positionName: "" });
+    //   setForm({ empName: "", empId: "", deptName: "", positionName: "" });
 
       setMsg({ type: "success", text: "사원이 추가되었습니다. 임시 비밀번호를 확인하세요." });
     } catch (e) {
+    
+      const status = e?.response?.status;
+
+      if (status === 401) {
+        setAdminPwErr("관리자 비밀번호가 일치하지 않습니다.");
+      } else if (status === 403) {
+        setAdminPwErr("관리자 권한이 없습니다." );
+      } else if (status === 400) {
+        setAdminPwErr("요청 값이 올바르지 않습니다.");
+      } else {
+        setAdminPwErr("요청 처리 중 오류가 발생했습니다." );
+      }
+
       console.error(e);
-      setMsg({ type: "error", text: "사원 추가에 실패했습니다." });
+      
     }
   };
 
@@ -484,10 +499,15 @@ export default function HrEmployeeModal({ open, onClose }) {
         onClose={() => {
           setAdminPwOpen(false);
           setAdminPw("");
+          setAdminPwErr("");
         }}
         adminPw={adminPw}
-        setAdminPw={setAdminPw}
+        setAdminPw={(v) => {
+        setAdminPw(v);
+        setAdminPwErr(""); // ✅ 입력 바뀌면 에러 지움(추천)
+        }}
         onConfirm={submitWithAdminPw}
+        errorText={adminPwErr} 
       />
 
       {/* 발급 결과 모달(1회 표시) */}
@@ -505,7 +525,7 @@ export default function HrEmployeeModal({ open, onClose }) {
 
 /* ---------------- Sub Modals ---------------- */
 
-function AdminPwConfirmModal({ open, onClose, adminPw, setAdminPw, onConfirm }) {
+function AdminPwConfirmModal({ open, onClose, adminPw, setAdminPw, onConfirm, errorText  }) {
   const can = adminPw.length >= 1;
   if (!open) return null;
 
@@ -530,6 +550,12 @@ function AdminPwConfirmModal({ open, onClose, adminPw, setAdminPw, onConfirm }) 
             onChange={setAdminPw}
             placeholder="********"
           />
+
+          {errorText && (
+          <div className="mt-3 text-xs px-3 py-2 rounded-xl border bg-rose-50/60 border-rose-200/60 text-rose-700">
+          {errorText}
+          </div>
+          )}
         </div>
 
         <div className="mt-4 flex justify-end gap-2">
