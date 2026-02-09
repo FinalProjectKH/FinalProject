@@ -23,16 +23,12 @@ export default function ApprovalHeader() {
         return '결재 대기 문서'; 
       case '/approval/upcoming':
         return '결재 예정 문서';
-      case '/approval/refer':
-        return '참조/열람 대기 문서';
       case '/approval/draft':
         return '기안 문서함';
       case '/approval/temp':
         return '임시 저장함';
       case '/approval/approve':
         return '결재 문서함';
-      case '/approval/dept':
-        return '부서 기안함';
       case '/approval/sign':
         return '서명 관리';
       default:

@@ -14,7 +14,6 @@ export default function ApprovalSidebar() {
   const [openSections, setOpenSections] = useState({
     "결재하기": true,
     "개인 문서함": true,
-    "부서 문서함": true,
     "설정": false
   });
 
@@ -34,7 +33,6 @@ export default function ApprovalSidebar() {
       items: [
         { id: "wait", label: "결재 대기 문서", path: "/approval/wait", count: 1 }, // 🔥 파란 숫자
         { id: "upcoming", label: "결재 예정 문서", path: "/approval/upcoming" },
-        { id: "refer", label: "참조/열람 대기 문서", path: "/approval/refer" },
       ]
     },
     {
@@ -46,13 +44,6 @@ export default function ApprovalSidebar() {
         { id: "approve", label: "결재 문서함", path: "/approval/approve" },
       ]
     },
-    {
-      title: "부서 문서함",
-      hasSettings: false,
-      items: [
-        { id: "dept", label: "부서 기안함", path: "/approval/dept" },
-      ]
-    }
   ];
 
   // 모달 띄우기 핸들러
