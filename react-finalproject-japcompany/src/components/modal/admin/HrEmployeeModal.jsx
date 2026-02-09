@@ -21,14 +21,14 @@ import { createPortal } from "react-dom";
 const userDefaultImg = "/image/user.png";
 
 const API = {
-  CREATE_EMPLOYEE: "/hr/employee",
-  SEARCH_EMPLOYEES: "/hr/employee/search",
-  GET_EMPLOYEE: "/hr/getEmployee",
+  CREATE_EMPLOYEE: "/admin/employee",
+  SEARCH_EMPLOYEES: "/admin/employee/search",
+  GET_EMPLOYEE: "/admin/getEmployee",
   VERIFY_ADMIN_PW: "/admin/verify-password",
 };
 
 const ID_HINT =
-  "권장: 이름(영문/초성)+생년(4자리) 또는 임의 숫자 조합 (예: psh1997, hong0412). 민감정보(주민번호 등)는 금지.";
+  "권장: 이름(영문/초성)+생년(4자리) 또는 임의 숫자 조합 (예: psh1997, hong0412)민감정보(주민번호 등)는 금지.";
 
 const getModalRoot = () => {
   if (typeof document === "undefined") return null;
@@ -194,26 +194,23 @@ export default function HrEmployeeModal({ open, onClose }) {
 
     try {
       setMsg({ type: "", text: "" });
-      await axiosApi.post(API.VERIFY_ADMIN_PW, { adminPw });
+      await axiosApi.post(API.VERIFY_ADMIN_PW, { empPw });
 
       const payload = {
         empName: form.empName.trim(),
         empId: form.empId.trim(),
         deptName: form.deptName.trim(),
         positionName: form.positionName.trim(),
-      };
+      }
       const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload);
 
-      // ✅ 실제 연결:
-      // const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload);
-      // const data = res.data;
-
-      // ✅ 데모 응답
-    //   const data = {
-    //     empNo: String(Math.floor(10000 + Math.random() * 89999)).padStart(5, "0"),
-    //     empId: payload.empId,
-    //     tempPw: makeTempPw(6),
-    //   };
+      /*
+     API 
+     CREATE_EMPLOYEE: "/admin/employee",
+     SEARCH_EMPLOYEES: "/admin/employee/search",
+     GET_EMPLOYEE: "/admin/getEmployee",
+     VERIFY_ADMIN_PW: "/admin/verify-password",
+      */ 
 
       setIssued(res.data);
       setIssuedOpen(true);
@@ -439,15 +436,16 @@ export default function HrEmployeeModal({ open, onClose }) {
                 placeholder="대리"
               />
 
-              <div className="col-span-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2">
-                <div className="text-[11px] text-black/45">아이디 추천</div>
-                <div className="mt-1 text-[12px] text-black/70 leading-relaxed">{ID_HINT}</div>
+              {/* <div className="col-span-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2"> */}
+              <div>
+                {/* <div className="text-[11px] text-black/45">아이디 추천</div> */}
+                <div className="mt-1 text-[12px] text-black/30 leading-relaxed">{ID_HINT}</div>
               </div>
 
               <div className="col-span-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2">
                 <div className="text-[11px] text-black/45">비밀번호</div>
                 <div className="mt-1 text-[13px] text-black/75 flex items-center gap-2">
-                  <KeyRound size={14} className="text-black/55" />
+                  <KeyRound size={14} className="text-black/20" />
                   서버 자동 생성(임시 비밀번호)
                 </div>
               </div>
