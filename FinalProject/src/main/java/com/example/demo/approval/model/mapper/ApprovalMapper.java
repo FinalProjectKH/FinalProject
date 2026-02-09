@@ -65,4 +65,10 @@ public interface ApprovalMapper {
 
 	void deleteExpenseDetail(String docNo);
 
+	int updateApprovalLineStatus(ApprovalLineDto lineDto);
+
+	void updateApprovalStatus(ApprovalDto docDto);
+
+	int countRemainingApprovers(String docNo);
+
 }

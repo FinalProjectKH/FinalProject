@@ -23,5 +23,7 @@ public interface ApprovalService {
 
 	Map<String, Object> selectApprovalDetail(String docNo);
 
+	int processApproval(Map<String, Object> params);
+
 
 }

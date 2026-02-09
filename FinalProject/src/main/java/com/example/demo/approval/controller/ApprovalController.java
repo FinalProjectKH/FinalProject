@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -154,6 +155,25 @@ public class ApprovalController {
             e.printStackTrace();
             return ResponseEntity.status(500).body("상세 조회 중 오류 발생");
         }
+    }
+    
+    
+    @PostMapping("/process")
+    public ResponseEntity<?> processApproval(
+    		@RequestBody Map<String, Object> params){
+    	try {
+    		int result = service.processApproval(params);
+    		
+    		if(result > 0) {
+    			return ResponseEntity.ok("처리가 완료되었습니다 !");
+    		} else {
+    			return ResponseEntity.status(500).body("처리 실패... ㅠㅠ");
+    		}
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(500).body("에러 : " + e.getMessage());
+		}
     }
     
    

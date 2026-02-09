@@ -185,6 +185,51 @@ public class ApprovalServiceImpl implements ApprovalService {
         return map;
 	}
 
+	/** 승인 , 반려 서비스
+	 *
+	 */
+	@Override
+	public int processApproval(Map<String, Object> params) {
+		String docNo = (String) params.get("docNo");
+        String status = (String) params.get("status"); // "C"(승인) or "R"(반려)
+        String empNo = String.valueOf(params.get("empNo"));
+        
+        // 1. 내 결재선 상태 업데이트 (대기 'W' -> 승인 'C' or 반려 'R')
+        // (Mapper에 updateApprovalLineStatus 쿼리가 필요함)
+        ApprovalLineDto lineDto = new ApprovalLineDto();
+        lineDto.setDocNo(docNo);
+        lineDto.setApproverNo(empNo);
+        lineDto.setAppLineStatus(status);
+        
+        int result = mapper.updateApprovalLineStatus(lineDto);
+        
+        // 2. 반려(R)인 경우 -> 문서 전체 상태도 바로 반려(R)로 끝냄
+        if ("R".equals(status)) {
+            ApprovalDto docDto = new ApprovalDto();
+            docDto.setDocNo(docNo);
+            docDto.setApprovalStatus("R");
+            mapper.updateApprovalStatus(docDto); // 문서 상태 업데이트
+            return result;
+        }
+        
+        // 3. 승인(C)인 경우 -> 내가 마지막 결재자인지 확인해야 함
+        if ("C".equals(status)) {
+            // 남은 결재자가 있는지 확인 (내 다음 순서이면서 상태가 'W'인 사람)
+            // 간단하게: 이 문서의 결재선 중 'W'가 하나라도 남았는지 카운트
+            int remaining = mapper.countRemainingApprovers(docNo);
+            
+            if (remaining == 0) {
+                // 남은 사람이 없으면 -> 최종 승인 처리
+                ApprovalDto docDto = new ApprovalDto();
+                docDto.setDocNo(docNo);
+                docDto.setApprovalStatus("C"); // 최종 승인
+                mapper.updateApprovalStatus(docDto);
+            }
+        }
+
+        return result;
+	}
+
 
 
 	

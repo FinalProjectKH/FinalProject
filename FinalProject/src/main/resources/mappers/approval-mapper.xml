@@ -208,5 +208,26 @@
     <delete id="deleteExpenseDetail"> DELETE FROM EXPENSE_DETAIL WHERE DOC_NO = #{docNo} </delete>
     <delete id="deleteApprovalExpense"> DELETE FROM APPROVAL_EXPENSE WHERE DOC_NO = #{docNo} </delete>
     <delete id="deleteApprovalVacation"> DELETE FROM APPROVAL_VACATION WHERE DOC_NO = #{docNo} </delete>
+    
+    <update id="updateApprovalLineStatus" parameterType="ApprovalLineDto">
+        UPDATE APPROVAL_LINE
+        SET APPLINE_STATUS = #{appLineStatus},
+            APPLINE_DATE = SYSDATE
+        WHERE DOC_NO = #{docNo}
+          AND APPROVER_NO = #{approverNo}  </update>
+
+    <update id="updateApprovalStatus" parameterType="ApprovalDto">
+        UPDATE APPROVAL
+        SET APPROVAL_STATUS = #{approvalStatus}
+        WHERE DOC_NO = #{docNo}
+    </update>
+
+    <select id="countRemainingApprovers" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM APPROVAL_LINE
+        WHERE DOC_NO = #{docNo}
+          AND APPLINE_STATUS = 'W'
+    </select>
+    
    
 </mapper>

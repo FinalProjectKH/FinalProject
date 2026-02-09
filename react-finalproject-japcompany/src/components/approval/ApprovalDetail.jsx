@@ -41,8 +41,35 @@ export default function ApprovalDetail() {
       });
   }, [docNo, navigate]);
 
-  const handleProcess = (status) => {
-    alert("승인/반려 기능 구현 필요");
+const handleProcess = async (status) => {
+    // 확인 메시지 (실수로 누름 방지)
+    const actionName = status === 'C' ? '승인' : '반려';
+    if (!window.confirm(`정말 ${actionName} 하시겠습니까?`)) return;
+
+    try {
+        const response = await fetch("/api/approval/process", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                docNo: docNo,       // 문서 번호
+                status: status,     // 'C' or 'R'
+                empNo: myEmpNo      // 내 사번 (String)
+            }),
+        });
+
+        if (response.ok) {
+            alert(`${actionName} 처리가 완료되었습니다.`);
+            navigate('/approval'); // 목록으로 이동
+        } else {
+            const msg = await response.text();
+            alert(`처리 실패: ${msg}`);
+        }
+    } catch (error) {
+        console.error(error);
+        alert("서버 통신 오류");
+    }
   };
 
   const handleModify = () => {
@@ -80,7 +107,7 @@ export default function ApprovalDetail() {
         approvalLineList: lines.map(line => ({
             approverNo: line.approverNo,
             name: line.empName,
-            rank: line.jobName,
+            rank: line.deptName,
             appLineStatus: line.appLineStatus,
             appLineOrder: line.appLineOrder
         })),
@@ -98,8 +125,25 @@ export default function ApprovalDetail() {
 
   if (loading || !data) return <div className="text-center py-20">로딩중...</div>;
 
-  const { approval, lines } = data;
-  const isMyTurn = lines.some(line => line.approverNo === myEmpNo && line.appLineStatus === 'W');
+const { approval, lines } = data;
+
+  // 🔥 [핵심 수정] 내 차례 판별 로직 강화
+  const isMyTurn = (() => {
+      // 1. 결재선에서 내 정보를 찾음
+      const myLine = lines.find(line => line.approverNo === myEmpNo);
+      
+      // 2. 내가 없거나, 내 상태가 'W'(대기)가 아니면 내 차례 아님
+      if (!myLine || myLine.appLineStatus !== 'W') return false;
+
+      // 3. [중요] 내 앞 순서(order < myOrder) 중에 아직 'W'(대기)인 사람이 있는지 확인
+      // 내 앞사람들 필터링 -> 그 중 상태가 'W'인 사람이 하나라도 있으면(some) -> 아직 내 차례 아님(!)
+      const hasPreviousWaiter = lines
+          .filter(line => line.appLineOrder < myLine.appLineOrder)
+          .some(prevLine => prevLine.appLineStatus === 'W');
+
+      // 앞사람이 다 처리했으면(false) -> 내 차례(true)
+      return !hasPreviousWaiter;
+  })();
   const isMyTemp = approval.empNo === myEmpNo && approval.tempSaveYn === 'Y';
 
   const renderForm = () => {
