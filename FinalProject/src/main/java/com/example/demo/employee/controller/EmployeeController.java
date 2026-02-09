@@ -3,6 +3,7 @@ package com.example.demo.employee.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,5 +50,27 @@ public class EmployeeController {
 					.body("로그아웃 중 예외 발생 : " + e.getMessage());
 		}
 	}
+	
+	
+	/** 전자결재에 필요함 (로그인한 회원 정보 들고오기)
+	 * @param session
+	 * @return
+	 */
+	@GetMapping("myInfo")
+    public ResponseEntity<LoginMemberDTO> getMyInfo(HttpSession session) {
+        
+        // 1. 세션에서 로그인 정보 가져오기
+        LoginMemberDTO loginMember = (LoginMemberDTO) session.getAttribute("loginMember");
+        
+        // 2. 로그인 안 된 상태면 401 Unauthorized 반환
+        if (loginMember == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        // 3. 보안상 비밀번호는 제거하고 반환 (선택사항)
+        loginMember.setEmpPw(null); 
+        
+        return ResponseEntity.ok(loginMember);
+    }
 	
 }

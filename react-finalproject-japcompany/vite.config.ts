@@ -28,6 +28,10 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_BASE_URL || 'http://localhost',
           changeOrigin: true,
         },
+        "/uploads": {
+          target: env.VITE_BASE_URL || 'http://localhost',
+          changeOrigin: true,
+        },
       },
     },
   };

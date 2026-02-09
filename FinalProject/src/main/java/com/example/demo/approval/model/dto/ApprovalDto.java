@@ -25,6 +25,7 @@ public class ApprovalDto {
 	private String approvalStatus;  // 결재 상태
 	private String approvalFile;    // 첨부 파일
 	private String relatedDocNo;    // 관련 문서
+	private String tempSaveYn;      // 임시저장 여부
 	
 	private String empName;         // 사원 이름
 	private String deptName;        // 부서 이름
@@ -36,27 +37,19 @@ public class ApprovalDto {
 	private String startDate;      // 휴가 시작일
 	private String endDate;        // 휴가 종료일
 	private double totalUse;       // 총 사용 휴가
-	private String vacationReason; // 휴가 사유
 	
 	// ---------------------------------------------- //
 	/*VACATION_TYPE TABLE*/
 	
-	private String vacationName; // 휴가 이름
 	private String deductYn;     // 연차 차감 여부
 	private double deductCount;  // 연차 차감 일수 (0.5 = 반차)
 	private String payYn;        // 유급 휴가 여부 (Y = 유급)
 	
 	// ---------------------------------------------- //
 	/*APPROVAL_EXPENSE TABLE*/
-	
 	private int totalAmount;      // 총 신청 금액
-	private String detailNo;   // 상세 고유 번호 (seq)
-	private LocalDateTime expenseDate; // 사용 일자
-	private String category; // 분류
-	private String usageDetail; // 사용내역
-	private int amount; // 개별 금액
-	private String note; // 비고
-	
+
+	private List<ExpenseDetailDto> expenseDetailList;
 	// ---------------------------------------------- //
 	/*APPROVAL_LINE TABLE*/
 	private List<ApprovalLineDto> approvalLineList;
