@@ -25,5 +25,9 @@ public interface ApprovalService {
 
 	int processApproval(Map<String, Object> params);
 
+	int cancelApproval(String docNo, String empNo);
+
+	Map<String, Object> getHomeData(String empNo);
+
 
 }
