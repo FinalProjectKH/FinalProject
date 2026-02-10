@@ -1,10 +1,12 @@
 package com.example.demo.attendance.controller;
 
 import java.util.List;
+
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,20 +16,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.attendance.model.dto.AttendanceDept;
 import com.example.demo.attendance.model.entity.Attendance;
-import com.example.demo.attendance.model.service.AttendanceServiceImpl;
+import com.example.demo.attendance.model.service.AttendanceService;
+import com.example.demo.common.config.auth.PrincipalDetails;
 import com.example.demo.common.utility.CommonUtils;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/attendance")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:5173")
+@Slf4j
 public class AttendanceController {
 	
-	private final AttendanceServiceImpl attendanceService;
+	private final AttendanceService attendanceService;
 	
 	// 출근 처리 컨트롤러
 	@PostMapping("/check-in")
@@ -102,5 +108,24 @@ public class AttendanceController {
 		List<Attendance> list = attendanceService.getWeeklyAttendance(empNo, startDate);
 		
 		return ResponseEntity.ok(list);
+	}
+	
+	@GetMapping("/department/{deptId}")
+	public ResponseEntity<?> getDeptAttendance(
+	        @PathVariable Long deptCode,
+	        @RequestParam String date, 
+	        @AuthenticationPrincipal PrincipalDetails principal) { 
+
+	    // 💡 1. 로그를 찍어서 현재 로그인한 사람의 권한을 눈으로 확인해!
+	    System.out.println("현재 접속자 권한: " + principal.getEmployee().getAuthorityLevel());
+
+	    // 💡 2. 권한 체크 (2 미만이면 403 에러 반환)
+	    // principal.getEmployee()가 null이 아닌지도 체크하면 더 안전해.
+	    if (principal.getEmployee() == null || principal.getEmployee().getAuthorityLevel() < 2) {
+	        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("조회 권한이 없습니다.");
+	    }
+
+	    List<AttendanceDept> list = attendanceService.getDeptAttendanceList(deptCode, date);
+	    return ResponseEntity.ok(list);
 	}
 }

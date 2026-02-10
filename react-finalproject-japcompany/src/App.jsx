@@ -1,12 +1,15 @@
 import { Route, Routes } from "react-router-dom";
 import MyCalendar from "./pages/Calendar";
 import MainLayout from "./components/layout/MainLayout";
-import AttendanceLayout from "./components/layout/attendance/AttendanceLayout";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Approval from "./pages/Approval";
 import ApprovalHome from "./components/approval/ApprovalHome";
 import ApprovalWrite from "./components/approval/ApprovalWrite";
+import AttendanceMain from "./components/layout/attendance/AttendanceMain";
+import AttendanceLayout from "./components/layout/attendance/AttendanceLayout";
+import DeptAttendanceLayout from "./components/layout/attendance/DeptAttendanceLayout";
+
 
 const App = () => {
   return (
@@ -23,6 +26,8 @@ const App = () => {
           </ProtectedRoute>
         }
       />
+
+      {/* 근태 관리 페이지 (부모) */}
       <Route
         path="/attendance"
         element={
@@ -30,7 +35,13 @@ const App = () => {
             <AttendanceLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        {/* 자식들: 얘네들이 바로 AttendanceLayout의 <Outlet /> 자리에 들어가는 애들이야! */}
+        <Route path="my" element={<AttendanceMain />} />  {/* 👈 여기서 AttendanceMain을 사용함! */}
+        <Route path="dept" element={<DeptAttendanceLayout />} />
+      </Route>
+
+
       <Route
         path="/calendar"
         element={
@@ -40,7 +51,7 @@ const App = () => {
         }
       />
 
-<Route
+      <Route
         path="/approval"
         element={
           <ProtectedRoute>
@@ -64,7 +75,7 @@ const App = () => {
         <Route path="dept" element={<div>부서 문서 목록</div>} />
         <Route path="sign" element={<div>서명 관리 페이지</div>} />
       </Route>
-    </Routes>
+    </Routes >
   );
 };
 

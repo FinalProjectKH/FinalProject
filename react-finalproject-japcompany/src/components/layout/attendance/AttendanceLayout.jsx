@@ -5,6 +5,7 @@ import Header from "../Header";
 import AttendanceMain from "./AttendanceMain";
 import RightSidebar from "./RightSidebar";
 import Sidebar from "../Sidebar";
+import { Outlet } from "react-router-dom";
 
 const AttendanceLayout = () => {
   const { user, triggerRefresh } = useAuthStore();
@@ -14,9 +15,10 @@ const AttendanceLayout = () => {
     if (!user || !user.empNo) return alert("로그인 정보가 없습니다.");
 
     try {
+
       // 1. 백엔드 호출
       const response = await axios.post('/api/attendance/check-in', {
-        empNo: user.empNo
+        empNo: user.empNo,
       });
 
       // 2. 성공 시 처리 (200 OK)
@@ -87,24 +89,35 @@ const AttendanceLayout = () => {
 
   return (
     <div className="min-h-screen bg-[#f1f1f1] relative">
-      {/* 1. 배경 이미지 - z-0 (가장 아래) */}
+      {/* 배경 이미지 */}
       <div className="absolute inset-0 bg-[url('/image/bg.jpeg')] bg-cover bg-center bg-no-repeat opacity-40 z-0" />
 
-      {/* 2. 콘텐츠 영역 - z-10 (배경보다 위) */}
       <div className="relative z-10 flex">
-        {/* 사이드바가 fixed가 아니라면 flex를 주면 옆으로 붙어! */}
+        {/* 1. 왼쪽 메뉴 사이드바 */}
         <Sidebar />
 
-        {/* 메인 영역: 사이드바 너비만큼 왼쪽 마진을 줌 */}
-        <div className="flex-1 ml-[240px] min-h-screen">
-          <div className="w-full px-10">
+        {/* 2. 메인 영역 (헤더 + 콘텐츠 + 우측 사이드바) */}
+        <div className="flex-1 ml-[240px] min-h-screen flex flex-col">
+          <div className="px-8 w-full">
             <Header />
-            <AttendanceMain />
+          </div>
+
+          {/* 콘텐츠와 우측 사이드바를 감싸는 컨테이너 */}
+          <div className="flex px-8 pb-8 gap-6 items-stretch">
+            {/* 중앙 대시보드 (Outlet) */}
+            <div className="flex-[3] min-w-0">
+              <Outlet />
+            </div>
+
+            {/* 3. 우측 사이드바 (정보 패널) */}
+            <div className="flex-[1] min-w-[300px]">
+              <RightSidebar 
+                onCheckIn={handleCheckIn} 
+                onCheckOut={handleCheckOut}
+              />
+            </div>
           </div>
         </div>
-
-        {/* 오른쪽 사이드바 */}
-        <RightSidebar onClockIn={handleCheckIn} onClockOut={handleCheckOut} />
       </div>
     </div>
   );

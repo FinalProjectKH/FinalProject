@@ -5,12 +5,15 @@ import java.time.LocalDate;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.chrono.ChronoLocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.attendance.model.dto.AttendanceDept;
 import com.example.demo.attendance.model.entity.Attendance;
 import com.example.demo.attendance.model.repository.AttendanceRepository;
 import com.example.demo.attendance.model.repository.CompanyInfoRepository;
@@ -86,37 +89,77 @@ public class AttendanceServiceImpl implements AttendanceService {
 	}
 
 	// 출퇴근 목록 조회 서비스
+	@Override
 	public List<Attendance> getWeeklyAttendance(String empNo, String startDate) {
-		
+
 		// 1. 프론트에서 넘겨준 문자열(예 : "2026-02-02")을 LocalDate 객체로 변환
 		// 만약 전달값이 없을 경우를 대비해 null 체크 후 오늘 기준 월요일로 방어 로직 추가
 		LocalDate start;
-		if(startDate == null || startDate.isEmpty()) {
+		if (startDate == null || startDate.isEmpty()) {
 			start = LocalDate.now().with(java.time.DayOfWeek.MONDAY);
 		} else {
 			start = LocalDate.parse(startDate, DateTimeFormatter.ISO_DATE);
 		}
-		
+
 		// 2. 시작 날짜(월요일)로부터 6일 뒤인 일요일을 계산 (주간 범위 생성)
 		LocalDate end = start.plusDays(6);
-		
+
 		// JPA가 생성하는 쿼리: WHERE work_date BETWEEN start AND end
 		// 날짜 순서대로 보여주기 위해 ASC 메서드 사용
 		return attendanceRepository.findByEmpNoAndWorkDateBetweenOrderByWorkDateAsc(empNo, start, end);
 	}
-	
+
 	public void checkIpAddress(String clientIp) {
 		// DB에서 허용된 IP 목록에 있는지 조회
 		boolean isAllowed = companyInfoRepository.existsByAllowedIp(clientIp);
 		log.info("DB 대조 결과 - 존재 여부: {}", isAllowed); // 여기서 false가 뜨는지 확인!
-		
-		if(!isAllowed) {
+
+		if (!isAllowed) {
 			// 1. 서버 로그에는 남김 (관리자용)
 			log.info("[보안 알림] 허용되지 않은 IP 접속 시도됨 - 접속 IP: {}", clientIp);
-			
+
 			// 2. 사용자에게는 핵심 내용만 전달
 			throw new RuntimeException("사내 지정 네트워크 환경에서만 출근이 가능합니다. (사내 Wi-Fi를 확인해 주세요)");
 		}
 	}
 
+	@Override
+	public List<AttendanceDept> getDeptAttendanceList(Long deptId, String date) {
+		LocalDate targetDate = LocalDate.parse(date);
+		List<Attendance> entities = attendanceRepository.findByDeptIdAndWorkDate(deptId, targetDate);
+
+		return entities.stream().map(entity -> {
+			AttendanceDept dept = new AttendanceDept();
+
+			// 1. 사원 정보 매핑
+			if (entity.getEmployee() != null) {
+				dept.setEmpNo(entity.getEmployee().getEmpNo());
+				dept.setEmpName(entity.getEmployee().getEmpName());
+				dept.setDeptCode(entity.getEmployee().getEmpNickname()); // 또는 부서명 필드
+			}
+
+			// 2. 시간 데이터 가공 (StartTime, EndTime으로 변경)
+			LocalDateTime start = entity.getStartTime();
+			LocalDateTime end = entity.getEndTime();
+
+			// HH:mm 포맷으로 깔끔하게 전달
+			dept.setStartTime(start != null ? start.toLocalTime().toString() : "-");
+			dept.setEndTime(end != null ? end.toLocalTime().toString() : "-");
+
+			// 3. 지각/조퇴 판별 로직
+			LocalTime standardIn = LocalTime.of(9, 0, 0);
+			LocalTime standardOut = LocalTime.of(18, 0, 0);
+
+			if (start != null) {
+				dept.setLate(start.toLocalTime().isAfter(standardIn));
+				dept.setMissing(end == null); // 출근은 있는데 퇴근이 없으면 누락
+			}
+
+			if (end != null) {
+				dept.setEarlyLeave(end.toLocalTime().isBefore(standardOut));
+			}
+
+			return dept;
+		}).collect(Collectors.toList());
+	}
 }
