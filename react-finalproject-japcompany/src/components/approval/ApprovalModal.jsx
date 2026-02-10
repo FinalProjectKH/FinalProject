@@ -6,7 +6,7 @@ export default function ApprovalModal({ isOpen, onClose }) {
   const navigate = useNavigate();
 
   if (!isOpen) return null;
-
+  
   const FORMS = [
     { 
       id: "general", 

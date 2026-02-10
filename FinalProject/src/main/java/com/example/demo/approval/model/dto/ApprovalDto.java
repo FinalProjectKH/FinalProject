@@ -1,5 +1,6 @@
 package com.example.demo.approval.model.dto;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import lombok.AllArgsConstructor;
@@ -24,6 +25,7 @@ public class ApprovalDto {
 	private String approvalStatus;  // 결재 상태
 	private String approvalFile;    // 첨부 파일
 	private String relatedDocNo;    // 관련 문서
+	private String tempSaveYn;      // 임시저장 여부
 	
 	private String empName;         // 사원 이름
 	private String deptName;        // 부서 이름
@@ -35,24 +37,19 @@ public class ApprovalDto {
 	private String startDate;      // 휴가 시작일
 	private String endDate;        // 휴가 종료일
 	private double totalUse;       // 총 사용 휴가
-	private String vacationReason; // 휴가 사유
 	
 	// ---------------------------------------------- //
 	/*VACATION_TYPE TABLE*/
 	
-	private String vacationName; // 휴가 이름
 	private String deductYn;     // 연차 차감 여부
 	private double deductCount;  // 연차 차감 일수 (0.5 = 반차)
 	private String payYn;        // 유급 휴가 여부 (Y = 유급)
 	
 	// ---------------------------------------------- //
 	/*APPROVAL_EXPENSE TABLE*/
-	
-	private String expenseDate;   // 예산 희망일 ex) 202602
 	private int totalAmount;      // 총 신청 금액
-	private String accountCode;   // 예산 과목 코드
-	private String expenseReason; // 신청 사유
-	
+
+	private List<ExpenseDetailDto> expenseDetailList;
 	// ---------------------------------------------- //
 	/*APPROVAL_LINE TABLE*/
 	private List<ApprovalLineDto> approvalLineList;

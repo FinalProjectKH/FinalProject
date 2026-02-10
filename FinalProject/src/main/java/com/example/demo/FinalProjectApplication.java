@@ -9,7 +9,8 @@ import org.springframework.context.annotation.PropertySource;
 
 @MapperScan({"com.example.demo.employee.model.mapper",
 			 "com.example.demo.org.model.mapper",
-			 "com.example.demo.mypage.model.mapper"})
+			 "com.example.demo.mypage.model.mapper",
+			 "com.example.demo.approval.model.mapper"})
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
 @PropertySource("classpath:config.properties")
 public class FinalProjectApplication {
