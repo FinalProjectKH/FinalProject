@@ -50,6 +50,9 @@ export default function HrEmployeeModal({ open, onClose }) {
   // 결과 예시: { empNo, empName, empId, deptName, positionName, empDelFl, profileImg }
   const [selectedEmpNo, setSelectedEmpNo] = useState(null);
   const [employeeDetail, setEmployeeDetail] = useState(null);
+  //검색 여부
+  const isEditMode = selectedEmpNo !== null;
+
   
 
 
@@ -209,6 +212,7 @@ export default function HrEmployeeModal({ open, onClose }) {
     setForm({ empName: "", empId: "", deptCode: "", positionCode: "" });
     setAdminPw("");
     setAdminPwOpen(false);
+    setSelectedEmpNo(null);
   };
 
   /* ===== 검색 실행 ===== */
@@ -273,6 +277,23 @@ export default function HrEmployeeModal({ open, onClose }) {
     setAdminPwOpen(true);
     console.log("adminPwOpen -> true (after set)");
   };
+
+  const onClickUpdate = () => {
+    if (!viewEmp) return;
+    console.log("수정 대상:", viewEmp.empNo);
+    // TODO: 관리자 비번 확인 → 수정 API 연결
+  };
+  
+  const onClickResign = () => {
+    if (!viewEmp) return;
+  
+    const action = viewEmp.empDelFl === "Y" ? "복귀" : "퇴사";
+    if (!window.confirm(`해당 직원을 ${action} 처리하시겠습니까?`)) return;
+  
+    console.log(`${action} 대상:`, viewEmp.empNo);
+    // TODO: 관리자 비번 확인 → 퇴사/복귀 API 연결
+  };
+
 
   const submitWithAdminPw = async () => {
     if (!adminPw) return;
@@ -570,7 +591,8 @@ export default function HrEmployeeModal({ open, onClose }) {
               >
                 초기화
               </button>
-
+              
+              {!isEditMode ? (
               <button
                 type="button"
                 onClick={onClickCreate}
@@ -584,6 +606,31 @@ export default function HrEmployeeModal({ open, onClose }) {
               >
                 <Save size={14} /> 추가
               </button>
+              ) : (
+                  <div className="flex gap-2">
+                    <button
+                     type="button" 
+                     onClick={onClickUpdate}
+                     className="
+                      text-xs px-3 py-2 rounded-xl
+                      bg-black/80 text-white hover:bg-black transition
+                      flex items-center gap-2
+                    "
+                    >
+                      <Save size={14} /> 수정
+                    </button>
+                    <button 
+                    type="button"
+                    onClick={onClickResign}
+                    className="
+                      text-xs px-3 py-2 rounded-xl
+                      bg-black/10 text-black/80 hover:bg-black/20 transition
+                    "
+                    >
+                      {viewEmp?.empDelFl === "Y" ? "복귀" : "퇴사"}
+                    </button>
+                  </div>
+              )}
             </div>
           </section>
         </div>
