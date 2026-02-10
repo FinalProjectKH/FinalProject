@@ -54,6 +54,9 @@ public class ApprovalDto {
 	/*APPROVAL_LINE TABLE*/
 	private List<ApprovalLineDto> approvalLineList;
 	
+	private String appLineDate; // 화면에 보여줄 '결재 완료일'
+
+	
 	
 	
 	

@@ -185,6 +185,98 @@ public class ApprovalServiceImpl implements ApprovalService {
         return map;
 	}
 
+	/** 승인 , 반려 서비스
+	 *
+	 */
+	@Override
+	public int processApproval(Map<String, Object> params) {
+		
+        // 1. 파라미터 꺼내기
+		String docNo = (String) params.get("docNo");
+        String status = (String) params.get("status"); // "C"(승인) or "R"(반려)
+        String empNo = String.valueOf(params.get("empNo"));
+        String rejectReason = (String) params.get("rejectReason"); // 반려 사유
+        
+        // 2. 결재선(Line) 업데이트 (대기 -> 승인/반려)
+        ApprovalLineDto lineDto = new ApprovalLineDto();
+        lineDto.setDocNo(docNo);
+        lineDto.setApproverNo(empNo);
+        lineDto.setAppLineStatus(status);
+        
+        // 반려일 때만 사유를 넣음 (승인이면 null)
+        if("R".equals(status)) {
+            lineDto.setRejectReason(rejectReason);
+        }
+        
+        // Mapper 실행 (여기서 XML의 updateApprovalLineStatus가 호출됨)
+        int result = mapper.updateApprovalLineStatus(lineDto);
+        
+        
+        // 3. 반려(R)인 경우 -> 문서 전체 상태도 바로 'R'로 변경 후 종료
+        if ("R".equals(status)) {
+            ApprovalDto docDto = new ApprovalDto();
+            docDto.setDocNo(docNo);
+            docDto.setApprovalStatus("R"); // 문서 상태: 반려
+            mapper.updateApprovalStatus(docDto); 
+            return result; // 여기서 끝!
+        }
+        
+        // 4. 승인(C)인 경우 -> "내가 마지막인가?" 확인
+        if ("C".equals(status)) {
+            // 남은 결재자(W 상태)가 몇 명인지 카운트
+            int remaining = mapper.countRemainingApprovers(docNo);
+            
+            // 남은 사람이 0명이면 -> 내가 마지막 결재자!
+            if (remaining == 0) {
+                ApprovalDto docDto = new ApprovalDto();
+                docDto.setDocNo(docNo);
+                docDto.setApprovalStatus("C"); // 문서 상태: 최종 승인
+                mapper.updateApprovalStatus(docDto);
+            }
+        }
+
+        return result;
+	}
+
+	
+	/** 결재 취소 (결재를 아직 안했을 때만)
+	 *
+	 */
+	@Override
+	public int cancelApproval(String docNo, String empNo) {
+		
+		// 결재선 체크 (결재된 흔적이 있다면 취소안됨)
+		int count = mapper.countApprovedLines(docNo);
+		if(count > 0) return 0;
+		
+		ApprovalDto dto = new ApprovalDto();
+		dto.setDocNo(docNo);
+		dto.setTempSaveYn("Y"); // 임시저장으로 옮김
+		dto.setApprovalStatus("W"); // 대기로 리셋
+		
+		
+		return mapper.updateApprovalToTemp(dto);
+	}
+
+	
+	@Override
+    public Map<String, Object> getHomeData(String empNo) {
+        Map<String, Object> map = new HashMap<>();
+        
+        // 1. 카운트 정보 (뱃지용)
+        map.put("waitCount", mapper.countWait(empNo));       // 결재 대기 건수
+        map.put("draftCount", mapper.countDraft(empNo));     // 기안 진행 건수
+        map.put("approveCount", mapper.countApproved(empNo)); // (옵션) 완료 건수
+
+        // 2. 미리보기 리스트 (최신 5건만)
+        // RowBounds를 쓰거나 쿼리에서 ROWNUM <= 5 처리
+        map.put("waitList", mapper.selectWaitListTop5(empNo)); 
+        map.put("draftList", mapper.selectDraftListTop5(empNo));
+        
+        return map;
+    }
+
+
 
 
 	

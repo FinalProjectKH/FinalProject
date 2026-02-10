@@ -65,4 +65,24 @@ public interface ApprovalMapper {
 
 	void deleteExpenseDetail(String docNo);
 
+	int updateApprovalLineStatus(ApprovalLineDto lineDto);
+
+	void updateApprovalStatus(ApprovalDto docDto);
+
+	int countRemainingApprovers(String docNo);
+
+	int countApprovedLines(String docNo);
+
+	int updateApprovalToTemp(ApprovalDto dto);
+
+	int countWait(String empNo);
+
+	int countDraft(String empNo);
+
+	int countApproved(String empNo);
+
+	List<ApprovalDto> selectWaitListTop5(String empNo);
+
+	List<ApprovalDto> selectDraftListTop5(String empNo);
+
 }
