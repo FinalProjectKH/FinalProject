@@ -560,14 +560,6 @@ export default function HrEmployeeModal({ open, onClose }) {
                 {/* <div className="text-[11px] text-black/45">아이디 추천</div> */}
                 <div className="mt-1 text-[12px] text-black/30 leading-relaxed">{ID_HINT}</div>
               </div>
-
-              <div className="col-span-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2">
-                <div className="text-[11px] text-black/45">비밀번호</div>
-                <div className="mt-1 text-[13px] text-black/75 flex items-center gap-2">
-                  <KeyRound size={14} className="text-black/20" />
-                  서버 자동 생성(임시 비밀번호)
-                </div>
-              </div>
             </div>
 
             <div className="mt-4 flex items-center justify-between gap-2">
