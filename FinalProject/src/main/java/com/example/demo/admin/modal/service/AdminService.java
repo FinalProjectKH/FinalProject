@@ -12,5 +12,10 @@ public interface AdminService {
 	
 	//직급 전체 조회
 	List<Map<String, Object>> fetchPositionList();
+	
+	//전체 직원 정보 검색
+	List<Map<String, Object>> employeeSearch(String keyword, boolean includeResigned);
+
+	Map<String, Object> getEmployee(String empNo);
 
 }

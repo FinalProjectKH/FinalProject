@@ -54,5 +54,16 @@ public class AdminServiceImpl implements AdminService{
 	public List<Map<String, Object>> fetchPositionList() {
 		return mapper.fetchPositionList();
 	}
+	
+	//전체 직원 정보 검색
+	@Override
+	public List<Map<String, Object>> employeeSearch(String keyword, boolean includeResigned) {
+		return mapper.employeeSearch(keyword, includeResigned);
+	}
+
+	@Override
+	public Map<String, Object> getEmployee(String empNo) {
+		return mapper.getEmployee (empNo);
+	}
 
 }

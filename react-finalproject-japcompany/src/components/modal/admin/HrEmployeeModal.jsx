@@ -49,6 +49,10 @@ export default function HrEmployeeModal({ open, onClose }) {
   const [results, setResults] = useState([]); // 리스트용 (간단 필드)
   // 결과 예시: { empNo, empName, empId, deptName, positionName, empDelFl, profileImg }
   const [selectedEmpNo, setSelectedEmpNo] = useState(null);
+  const [employeeDetail, setEmployeeDetail] = useState(null);
+  
+
+
 
   //부서 / 직급 조회
   useEffect(()=>{
@@ -84,11 +88,7 @@ export default function HrEmployeeModal({ open, onClose }) {
 
   },[open]);
 
-  const selected = useMemo(() => {
-    return results.find((r) => r.empNo === selectedEmpNo) ?? null;
-  }, [results, selectedEmpNo]);
-
-  /* ===== 추가(하단 폼) ===== */
+    /* ===== 추가(하단 폼) ===== */
   const [form, setForm] = useState({
     empName: "",
     empId: "",
@@ -99,6 +99,79 @@ export default function HrEmployeeModal({ open, onClose }) {
   });
 
   const [msg, setMsg] = useState({ type: "", text: "" });
+
+  const selected = useMemo(() => {
+    return results.find((r) => r.empNo === selectedEmpNo) ?? null;
+  }, [results, selectedEmpNo]);
+
+  const viewEmp = employeeDetail ?? selected;
+
+  useEffect(() => {
+  if (!open) return;
+
+  console.log("selectedEmpNo:", selectedEmpNo);
+
+
+  // 선택 해제 시 초기화
+  if (!selectedEmpNo) {
+    setEmployeeDetail(null);
+    setForm({
+      empName: "",
+      empId: "",
+      deptName: "",
+      positionName: "",
+      deptCode: "",
+      positionCode: "",
+    });
+    return;
+  }
+
+  (async () => {
+    try {
+      const res = await axiosApi.get(API.GET_EMPLOYEE, {
+        params: { empNo: selectedEmpNo }, // 서버 파라미터명이 다르면 여기만 수정
+      });
+
+      const r = res.data;
+      console.log("getEmployee res.data =", r);
+
+      // ✅ 대문자/소문자 둘 다 대응해서 “프론트용 키”로 통일
+      const d = {
+        empNo: r.empNo ?? r.EMP_NO,
+        empName: r.empName ?? r.EMP_NAME,
+        empId: r.empId ?? r.EMP_ID,
+        empEmail: r.empEmail ?? r.EMP_EMAIL,
+        empPhone: r.empPhone ?? r.EMP_PHONE,
+        enrollDate: r.enrollDate ?? r.ENROLL_DATE,
+        empDelFl: r.empDelFl ?? r.EMP_DEL_FL,
+        introduction: r.introduction ?? r.INTRODUCTION,
+        profileImg: r.profileImg ?? r.PROFILE_IMG,
+        deptName: r.deptName ?? r.DEPT_NAME,
+        positionName: r.positionName ?? r.POSITION_NAME,
+        deptCode: r.deptCode ?? r.DEPT_CODE,
+        positionCode: r.positionCode ?? r.POSITION_CODE,
+      };
+
+      setEmployeeDetail(d);
+
+
+
+
+      // 하단 폼에도 같이 채움(조회/수정 겸용)
+      setForm((p) => ({
+        ...p,
+        empName: d.empName ?? "",
+        empId: d.empId ?? "",
+        deptCode: d.deptCode ?? "",
+        positionCode: d.positionCode ?? "",
+      }));
+    } catch (e) {
+      console.error(e);
+      setEmployeeDetail(null);
+      setMsg({ type: "error", text: "직원 상세 조회에 실패했습니다." });
+    }
+  })();
+}, [open, selectedEmpNo]);
 
   /* ===== 관리자 비번 확인 모달 ===== */
   const [adminPwOpen, setAdminPwOpen] = useState(false);
@@ -138,7 +211,7 @@ export default function HrEmployeeModal({ open, onClose }) {
     setAdminPwOpen(false);
   };
 
-  /* ===== 검색 실행(UI 완성: 지금은 더미 데이터) ===== */
+  /* ===== 검색 실행 ===== */
   const onSearch = async () => {
     setMsg({ type: "", text: "" });
 
@@ -150,71 +223,43 @@ export default function HrEmployeeModal({ open, onClose }) {
       return;
     }
 
-    // ✅ 실제 연결:
-    // const res = await axiosApi.get(API.SEARCH_EMPLOYEES, { params: { keyword: q, includeResigned } });
-    // const list = Array.isArray(res.data) ? res.data : [];
-    // setResults(list);
-    // setSelectedEmpNo(list[0]?.empNo ?? null);
-
-    // ✅ 더미 결과 (UI 확인용)
-    const demo = [
-      {
-        empNo: "00001",
-        empName: "홍길동",
-        empId: "hong0412",
-        deptName: "인사부",
-        positionName: "대리",
-        empEmail: "hong@company.com",
-        empPhone: "010-0000-0000",
-        enrollDate: "2026-01-15",
-        empDelFl: "N",
-        profileImg: null,
+    try {
+    const res = await axiosApi.get(API.SEARCH_EMPLOYEES, {
+      params: {
+        keyword: q,
+        includeResigned: includeResigned,
       },
-      {
-        empNo: "00002",
-        empName: "김영희",
-        empId: "younghee1996",
-        deptName: "재무부",
-        positionName: "과장",
-        empEmail: "yh@company.com",
-        empPhone: "010-1111-2222",
-        enrollDate: "2025-11-02",
-        empDelFl: "N",
-        profileImg: null,
-      },
-      {
-        empNo: "00003",
-        empName: "박철수",
-        empId: "chulsoo97",
-        deptName: "영업부",
-        positionName: "사원",
-        empEmail: "cs@company.com",
-        empPhone: "010-3333-4444",
-        enrollDate: "2024-06-10",
-        empDelFl: "Y", // 퇴사
-        profileImg: null,
-      },
-    ];
-
-    const filtered = demo.filter((e) => {
-      const hit =
-        e.empName.includes(q) ||
-        e.empId.toLowerCase().includes(q.toLowerCase()) ||
-        e.empNo.includes(q) ||
-        e.deptName.includes(q) ||
-        e.positionName.includes(q);
-      if (!hit) return false;
-      if (!includeResigned && e.empDelFl === "Y") return false;
-      return true;
     });
 
-    setResults(filtered);
-    setSelectedEmpNo(filtered[0]?.empNo ?? null);
+    const raw = Array.isArray(res.data) ? res.data : [];
+    const list = raw.map((e) => ({
+      empNo: e.empNo ?? e.EMP_NO,
+      empName: e.empName ?? e.EMP_NAME,
+      empId: e.empId ?? e.EMP_ID,
+      deptName: e.deptName ?? e.DEPT_NAME,
+      positionName: e.positionName ?? e.POSITION_NAME,
+      empDelFl: e.empDelFl ?? e.EMP_DEL_FL,
+      profileImg: e.profileImg ?? e.PROFILE_IMG,
+    }));
 
-    if (filtered.length === 0) {
+    console.log("list[0] =", list[0]);
+    console.log("list[0].empNo / EMP_NO =", list[0]?.empNo, list[0]?.EMP_NO);
+
+    setResults(list);
+    setSelectedEmpNo(list[0]?.empNo ?? null);
+
+    if (list.length === 0) {
       setMsg({ type: "info", text: "검색 결과가 없습니다." });
     }
+        
+    } catch (e) {
+        console.error(e);
+        setMsg({ type: "error", text: "검색 중 오류가 발생했습니다." });
+    }
+
   };
+
+
 
   const onSelectClear = () => setSelectedEmpNo(null);
 
@@ -244,7 +289,7 @@ export default function HrEmployeeModal({ open, onClose }) {
         deptCode: form.deptCode,
         positionCode: form.positionCode,
       }
-      const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload);
+    //   const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload); -> 사원 추가 요청 임시 주석 처리함
 
       /*
      API 
@@ -361,7 +406,7 @@ export default function HrEmployeeModal({ open, onClose }) {
                         const active = emp.empNo === selectedEmpNo;
                         return (
                           <button
-                            key={emp.empNo}
+                            key={emp.empNo || emp.EMP_NO}
                             type="button"
                             onClick={() => setSelectedEmpNo(emp.empNo)}
                             className={`
@@ -415,35 +460,38 @@ export default function HrEmployeeModal({ open, onClose }) {
                     <div className="text-[12px] font-semibold text-black/70 mb-2">직원 증명사진</div>
                     <div className="w-full aspect-square rounded-2xl bg-black/10 overflow-hidden shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
                       <img
-                        src={selected?.profileImg || userDefaultImg}
+                        src={viewEmp?.profileImg || userDefaultImg}
+                        onError={(e) => {
+                            e.currentTarget.src = userDefaultImg;
+                        }}
                         className="w-full h-full object-cover"
                         alt="profile"
                       />
                     </div>
 
                     <div className="mt-3 text-sm font-semibold text-black/85">
-                      {selected?.empName ?? "선택된 직원 없음"}
+                      {viewEmp?.empName ?? "선택된 직원 없음"}
                     </div>
                     <div className="mt-1 text-xs text-black/50">
-                      {selected ? `${selected.positionName ?? "-"} · ${selected.deptName ?? "-"}` : "좌측에서 선택"}
+                      {viewEmp ? `${viewEmp.positionName ?? "-"} · ${viewEmp.deptName ?? "-"}` : "좌측에서 선택"}
                     </div>
                   </div>
 
                   {/* 전체 조회란 */}
                   <div>
                     <div className="text-[12px] font-semibold text-black/70 mb-3">전체 조회</div>
-                    {!selected ? (
+                    {!viewEmp ? (
                       <div className="text-sm text-black/50">좌측에서 직원을 선택하면 정보가 표시됩니다.</div>
                     ) : (
                       <div className="grid grid-cols-2 gap-3">
-                        <Field label="사번" value={selected.empNo} />
-                        <Field label="아이디" value={selected.empId} />
-                        <Field label="이메일" value={selected.empEmail ?? "-"} />
-                        <Field label="전화번호" value={selected.empPhone ?? "-"} />
-                        <Field label="부서" value={selected.deptName ?? "-"} />
-                        <Field label="직급" value={selected.positionName ?? "-"} />
-                        <Field label="입사일" value={selected.enrollDate ?? "-"} />
-                        <Field label="재직상태" value={selected.empDelFl === "Y" ? "퇴사" : "재직"} />
+                        <Field label="사번" value={viewEmp.empNo} />
+                        <Field label="아이디" value={viewEmp.empId} />
+                        <Field label="이메일" value={viewEmp.empEmail ?? "-"} />
+                        <Field label="전화번호" value={viewEmp.empPhone ?? "-"} />
+                        <Field label="부서" value={viewEmp.deptName ?? "-"} />
+                        <Field label="직급" value={viewEmp.positionName ?? "-"} />
+                        <Field label="입사일" value={viewEmp.enrollDate ?? "-"} />
+                        <Field label="재직상태" value={viewEmp.empDelFl === "Y" ? "퇴사" : "재직"} />
                       </div>
                     )}
                   </div>
@@ -457,7 +505,7 @@ export default function HrEmployeeModal({ open, onClose }) {
             <div className="flex items-center justify-between">
               <div className="text-[13px] font-semibold text-black/75 flex items-center gap-2">
                 <UserPlus size={16} className="text-black/60" />
-                사원 추가
+                인사 정보 관리
               </div>
               <div className="text-[11px] text-black/45">* 비밀번호는 서버에서 임시 발급</div>
             </div>
@@ -794,7 +842,7 @@ function highlightText(text, keyword) {
   const after = t.slice(idx + k.length);
 
   return (
-    <span key={`${t}-${idx}`}>
+    <span>
       {before}
       <mark className="bg-amber-200/70 rounded px-0.5">{mid}</mark>
       {after}

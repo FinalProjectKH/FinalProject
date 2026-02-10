@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.admin.modal.service.AdminService;
@@ -56,5 +57,17 @@ public class AdminController {
 	@GetMapping("fetchPositionList")
 	public ResponseEntity<List<Map<String, Object>>> fetchPositionList(){
 		return ResponseEntity.ok(service.fetchPositionList());
+	}
+	
+	//전체 직원 정보 검색
+	@GetMapping("employee/search")
+	public ResponseEntity<List<Map<String, Object>>> employeeSearch (@RequestParam("keyword") String keyword, @RequestParam("includeResigned") boolean includeResigned) {
+		return ResponseEntity.ok(service.employeeSearch (keyword, includeResigned));
+	}
+	
+	//전체 직원 정보 검색
+	@GetMapping("getEmployee")
+	public ResponseEntity<Map<String, Object>> getEmployee (@RequestParam("empNo") String empNo) {
+		return ResponseEntity.ok(service.getEmployee (empNo));
 	}
 }
