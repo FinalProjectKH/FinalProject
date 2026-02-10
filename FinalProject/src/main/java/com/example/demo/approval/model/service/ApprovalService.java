@@ -21,7 +21,7 @@ public interface ApprovalService {
 
 	List<ApprovalDto> selectMyApprovedList(int empNo);
 
-	Map<String, Object> selectApprovalDetail(String docNo);
+	Map<String, Object> selectApprovalDetail(String docNo, String empNo);
 
 	int processApproval(Map<String, Object> params);
 

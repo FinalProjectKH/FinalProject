@@ -1,6 +1,7 @@
 package com.example.demo.calendar.model.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -33,7 +34,7 @@ public interface CalendarCategoryRepository extends JpaRepository<CalendarCatego
     CalendarCategoryEntity findByName(String name);
     
     
-    
+    Optional<CalendarCategoryEntity> findByNameAndOwnerEmpNo(String name, String ownerEmpNo);
     
     
     
