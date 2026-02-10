@@ -52,10 +52,8 @@ export default function HrEmployeeModal({ open, onClose }) {
   const [employeeDetail, setEmployeeDetail] = useState(null);
   //검색 여부
   const isEditMode = selectedEmpNo !== null;
-
-  
-
-
+  // 수정 / 추가 모드 상태 ( "create" | "update" | "resign" )
+  const [adminAction, setAdminAction] = useState(null); 
 
   //부서 / 직급 조회
   useEffect(()=>{
@@ -193,6 +191,18 @@ export default function HrEmployeeModal({ open, onClose }) {
     );
   }, [form]);
 
+  const isDirty = useMemo(() => {
+    if (!employeeDetail) return false;
+  
+    return (
+      form.empName !== (employeeDetail.empName ?? "") ||
+      form.empId !== (employeeDetail.empId ?? "") ||
+      form.deptCode !== (employeeDetail.deptCode ?? "") ||
+      form.positionCode !== (employeeDetail.positionCode ?? "")
+    );
+  }, [form, employeeDetail]);
+
+
   const validate = () => {
     if (!form.empName.trim()) return "이름은 필수입니다.";
 
@@ -263,12 +273,14 @@ export default function HrEmployeeModal({ open, onClose }) {
 
   };
 
-
-
-  const onSelectClear = () => setSelectedEmpNo(null);
+  const onSelectClear = () => {
+    setSelectedEmpNo(null);
+    setAdminAction(null);
+}
 
   /* ===== 추가 버튼 ===== */
   const onClickCreate = () => {
+    setAdminAction("create");
     console.log("onClickCreate fired"); 
     setMsg({ type: "", text: "" });
     const err = validate();
@@ -280,30 +292,29 @@ export default function HrEmployeeModal({ open, onClose }) {
 
   const onClickUpdate = () => {
     if (!viewEmp) return;
-    console.log("수정 대상:", viewEmp.empNo);
-    // TODO: 관리자 비번 확인 → 수정 API 연결
+    setAdminAction("update");
+    setAdminPwOpen(true);
   };
   
   const onClickResign = () => {
     if (!viewEmp) return;
-  
-    const action = viewEmp.empDelFl === "Y" ? "복귀" : "퇴사";
-    if (!window.confirm(`해당 직원을 ${action} 처리하시겠습니까?`)) return;
-  
-    console.log(`${action} 대상:`, viewEmp.empNo);
-    // TODO: 관리자 비번 확인 → 퇴사/복귀 API 연결
+    setAdminAction("resign");
+    setAdminPwOpen(true);
   };
 
 
   const submitWithAdminPw = async () => {
     if (!adminPw) return;
 
-    if (!window.confirm("사원을 추가하시겠습니까?")) return;
-
     try {
       setMsg({ type: "", text: "" });
+      
+      //관리자 비번 검증 (공통)
       await axiosApi.post(API.VERIFY_ADMIN_PW, { adminPw });
-
+      
+      //추가
+      if (adminAction === "create") {
+        if (!window.confirm("사원을 추가하시겠습니까?")) return;
       const payload = {
         empName: form.empName.trim(),
         empId: form.empId.trim(),
@@ -312,22 +323,30 @@ export default function HrEmployeeModal({ open, onClose }) {
       }
       const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload); 
 
-      /*
-     API 
-     CREATE_EMPLOYEE: "/admin/employee",
-     SEARCH_EMPLOYEES: "/admin/employee/search",
-     GET_EMPLOYEE: "/admin/getEmployee",
-     VERIFY_ADMIN_PW: "/admin/verify-password",
-      */ 
-
       setIssued(res.data);
       setIssuedOpen(true);
 
+      //setForm({ empName: "", empId: "", deptName: "", positionName: "" });
+      setMsg({ type: "success", text: "사원이 추가되었습니다. 임시 비밀번호를 확인하세요." });
+      }
+
+    //수정
+    if (adminAction === "update") {
+      if (!window.confirm("사원 정보를 수정하시겠습니까?")) return;
+      console.log("수정 API 호출:", viewEmp.empNo);
+    }
+
+    //퇴사/복귀
+    if (adminAction === "resign") {
+      const action = viewEmp.empDelFl === "Y" ? "복귀" : "퇴사";
+      if (!window.confirm(`해당 직원을 ${action} 처리하시겠습니까?`)) return;
+      console.log(`${action} API 호출:`, viewEmp.empNo);
+    }
+
       setAdminPwOpen(false);
       setAdminPw("");
-    //   setForm({ empName: "", empId: "", deptName: "", positionName: "" });
+      setAdminAction(null);
 
-      setMsg({ type: "success", text: "사원이 추가되었습니다. 임시 비밀번호를 확인하세요." });
     } catch (e) {
     
       const status = e?.response?.status;
@@ -341,9 +360,7 @@ export default function HrEmployeeModal({ open, onClose }) {
       } else {
         setAdminPwErr("요청 처리 중 오류가 발생했습니다." );
       }
-
       console.error(e);
-      
     }
   };
 
@@ -611,22 +628,24 @@ export default function HrEmployeeModal({ open, onClose }) {
                     <button
                      type="button" 
                      onClick={onClickUpdate}
-                     className="
+                     disabled={!isDirty}
+                     className={`
                       text-xs px-3 py-2 rounded-xl
                       bg-black/80 text-white hover:bg-black transition
                       flex items-center gap-2
-                    "
+                      ${!isDirty ? "opacity-60 cursor-not-allowed" : ""}
+                      `}
                     >
                       <Save size={14} /> 수정
                     </button>
+
                     <button 
                     type="button"
                     onClick={onClickResign}
                     className="
                       text-xs px-3 py-2 rounded-xl
-                      bg-black/10 text-black/80 hover:bg-black/20 transition
-                    "
-                    >
+                      bg-black/10 text-black/80 hover:bg-black/20 transition"
+                      >
                       {viewEmp?.empDelFl === "Y" ? "복귀" : "퇴사"}
                     </button>
                   </div>
