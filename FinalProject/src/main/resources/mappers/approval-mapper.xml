@@ -2,70 +2,64 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.example.demo.approval.model.mapper.ApprovalMapper">
 
+    <resultMap id="approvalResultMap" type="com.example.demo.approval.model.dto.ApprovalDto">
+        <id property="docNo" column="DOC_NO"/>
+        <result property="empNo" column="EMP_NO"/>
+        <result property="approvalDate" column="APPROVAL_DATE"/>
+        
+        <result property="appLineDate" column="APPLINE_DATE"/>
+        
+        <result property="retentionYear" column="RETENTION_YEAR"/>
+        <result property="approvalTitle" column="APPROVAL_TITLE"/>
+        <result property="approvalContent" column="APPROVAL_CONTENT"/>
+        <result property="approvalStatus" column="APPROVAL_STATUS"/>
+        <result property="approvalFile" column="APPROVAL_FILE"/>
+        <result property="relatedDocNo" column="RELATED_DOC_NO"/>
+        <result property="tempSaveYn" column="TEMP_SAVE_YN"/>
+        
+        <result property="empName" column="EMP_NAME"/>
+        <result property="deptName" column="DEPT_NAME"/>
+    </resultMap>
+
+
     <select id="selectNextDocNo" resultType="string">
-        SELECT TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' || 
-        LTRIM(TO_CHAR(SEQ_DOC_NO.NEXTVAL, '0000000'))
-        FROM DUAL
+        SELECT TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' || LTRIM(TO_CHAR(SEQ_DOC_NO.NEXTVAL, '0000000')) FROM DUAL
     </select>
     
     <insert id="insertApproval" parameterType="approvalDto">
         INSERT INTO "APPROVAL" (
-            DOC_NO, 
-            EMP_NO, 
-            APPROVAL_DATE, 
-            RETENTION_YEAR,
-            APPROVAL_TITLE, 
-            APPROVAL_CONTENT, 
-            APPROVAL_STATUS,
-            APPROVAL_FILE,
-            TEMP_SAVE_YN
+            DOC_NO, EMP_NO, APPROVAL_DATE, RETENTION_YEAR,
+            APPROVAL_TITLE, APPROVAL_CONTENT, APPROVAL_STATUS,
+            APPROVAL_FILE, TEMP_SAVE_YN
         ) VALUES (
-            #{docNo}, 
-            #{empNo}, 
-            SYSDATE, 
-            #{retentionYear},
-            #{approvalTitle}, 
-            #{approvalContent}, 
-            'W',
+            #{docNo}, #{empNo}, SYSDATE, #{retentionYear},
+            #{approvalTitle}, #{approvalContent}, 'W',
             #{approvalFile, jdbcType=VARCHAR},     
             NVL(#{tempSaveYn, jdbcType=VARCHAR}, 'N')
         ) 	
     </insert>
     
     <insert id="insertApprovalLine">
-        INSERT INTO "APPROVAL_LINE" (
-            APPLINE_NO, DOC_NO, APPROVER_NO, APPLINE_ORDER, APPLINE_STATUS
-        ) VALUES (
-            SEQ_APPLINE_NO.NEXTVAL, #{docNo}, #{approverNo}, #{appLineOrder}, 'W'
-        )
+        INSERT INTO "APPROVAL_LINE" (APPLINE_NO, DOC_NO, APPROVER_NO, APPLINE_ORDER, APPLINE_STATUS) 
+        VALUES (SEQ_APPLINE_NO.NEXTVAL, #{docNo}, #{approverNo}, #{appLineOrder}, 'W')
     </insert>
     
     <insert id="insertApprovalExpense">
-        INSERT INTO APPROVAL_EXPENSE (
-            DOC_NO, TOTAL_AMOUNT
-        ) VALUES (
-            #{docNo}, #{totalAmount}
-        )
+        INSERT INTO APPROVAL_EXPENSE (DOC_NO, TOTAL_AMOUNT) VALUES (#{docNo}, #{totalAmount})
     </insert>
     
     <insert id="insertExpenseDetail">
-      INSERT INTO EXPENSE_DETAIL (
-        DETAIL_NO, DOC_NO, EXPENSE_DATE, CATEGORY, USAGE_DETAIL, AMOUNT, NOTE
-      ) VALUES (
-        SEQ_EXPENSE_DETAIL_NO.NEXTVAL, #{docNo}, #{expenseDate}, #{category}, #{usageDetail}, #{amount}, #{note}
-      )		
+      INSERT INTO EXPENSE_DETAIL (DETAIL_NO, DOC_NO, EXPENSE_DATE, CATEGORY, USAGE_DETAIL, AMOUNT, NOTE) 
+      VALUES (SEQ_EXPENSE_DETAIL_NO.NEXTVAL, #{docNo}, #{expenseDate}, #{category}, #{usageDetail}, #{amount}, #{note})		
     </insert>
     
     <insert id="insertApprovalVacation">
-        INSERT INTO APPROVAL_VACATION (
-            DOC_NO, VACATION_TYPE, START_DATE, END_DATE, TOTAL_USE
-        ) VALUES (
-            #{docNo}, #{vacationType}, TO_DATE(#{startDate}, 'YYYY-MM-DD'), TO_DATE(#{endDate}, 'YYYY-MM-DD'), #{totalUse}
-        )
+        INSERT INTO APPROVAL_VACATION (DOC_NO, VACATION_TYPE, START_DATE, END_DATE, TOTAL_USE) 
+        VALUES (#{docNo}, #{vacationType}, TO_DATE(#{startDate}, 'YYYY-MM-DD'), TO_DATE(#{endDate}, 'YYYY-MM-DD'), #{totalUse})
     </insert>
 
 
-    <select id="selectWaitList" resultType="approvalDto">
+    <select id="selectWaitList" resultMap="approvalResultMap">
         SELECT A.DOC_NO, A.APPROVAL_TITLE, 
                TO_CHAR(A.APPROVAL_DATE, 'YYYY-MM-DD') AS APPROVAL_DATE, 
                A.APPROVAL_STATUS, 
@@ -86,7 +80,7 @@
         ORDER BY A.DOC_NO DESC
     </select>
 
-    <select id="selectUpcomingList" resultType="approvalDto">
+    <select id="selectUpcomingList" resultMap="approvalResultMap">
         SELECT A.DOC_NO, A.APPROVAL_TITLE, 
                TO_CHAR(A.APPROVAL_DATE, 'YYYY-MM-DD') AS APPROVAL_DATE, 
                A.APPROVAL_STATUS, 
@@ -107,17 +101,20 @@
         ORDER BY A.DOC_NO DESC
     </select>
 
-    <select id="selectMyDraftList" resultType="approvalDto">
-        SELECT DOC_NO, APPROVAL_TITLE, 
-               TO_CHAR(APPROVAL_DATE, 'YYYY-MM-DD') AS APPROVAL_DATE, 
-               APPROVAL_STATUS
+    <select id="selectMyDraftList" resultMap="approvalResultMap">
+        SELECT 
+            DOC_NO, 
+            APPROVAL_TITLE, 
+            TO_CHAR(APPROVAL_DATE, 'YYYY-MM-DD') AS APPROVAL_DATE, 
+            APPROVAL_STATUS
         FROM APPROVAL
         WHERE EMP_NO = #{empNo}
           AND TEMP_SAVE_YN = 'N'
+          AND APPROVAL_STATUS = 'W'
         ORDER BY DOC_NO DESC
     </select>
     
-    <select id="selectTempList" resultType="approvalDto">
+    <select id="selectTempList" resultMap="approvalResultMap">
         SELECT DOC_NO, APPROVAL_TITLE, 
                TO_CHAR(APPROVAL_DATE, 'YYYY-MM-DD') AS APPROVAL_DATE, 
                APPROVAL_STATUS, 
@@ -128,32 +125,51 @@
         ORDER BY DOC_NO DESC
     </select>
 
-    <select id="selectMyApprovedList" resultType="approvalDto">
-        SELECT A.DOC_NO, A.APPROVAL_TITLE, 
-               TO_CHAR(A.APPROVAL_DATE, 'YYYY-MM-DD') AS APPROVAL_DATE, 
-               A.APPROVAL_STATUS, 
-               E.EMP_NAME
-        FROM APPROVAL A
-        JOIN APPROVAL_LINE L ON A.DOC_NO = L.DOC_NO
-        JOIN EMPLOYEE E ON A.EMP_NO = E.EMP_NO
-        WHERE L.APPROVER_NO = #{empNo}
-          AND L.APPLINE_STATUS IN ('C', 'R')
-        ORDER BY A.DOC_NO DESC
+    <select id="selectMyApprovedList" resultMap="approvalResultMap">
+        SELECT * FROM (
+            -- 1) 내가 결재자로 참여 (내 결재일 기준)
+            SELECT 
+                A.DOC_NO, 
+                A.APPROVAL_TITLE, 
+                TO_CHAR(A.APPROVAL_DATE, 'YYYY-MM-DD') AS APPROVAL_DATE, 
+                A.APPROVAL_STATUS, 
+                E.EMP_NAME,
+                TO_CHAR(L.APPLINE_DATE, 'YYYY-MM-DD') AS APPLINE_DATE
+            FROM APPROVAL A
+            JOIN APPROVAL_LINE L ON A.DOC_NO = L.DOC_NO
+            JOIN EMPLOYEE E ON A.EMP_NO = E.EMP_NO
+            WHERE L.APPROVER_NO = #{empNo} 
+              AND L.APPLINE_STATUS IN ('C', 'R')
+
+            UNION
+
+            -- 2) 내 기안이 완료됨 (최종 완료일 기준)
+            SELECT 
+                A.DOC_NO, 
+                A.APPROVAL_TITLE, 
+                TO_CHAR(A.APPROVAL_DATE, 'YYYY-MM-DD') AS APPROVAL_DATE, 
+                A.APPROVAL_STATUS, 
+                E.EMP_NAME,
+                (SELECT TO_CHAR(MAX(APPLINE_DATE), 'YYYY-MM-DD') 
+                 FROM APPROVAL_LINE 
+                 WHERE DOC_NO = A.DOC_NO AND APPLINE_STATUS IN ('C', 'R')) AS APPLINE_DATE
+            FROM APPROVAL A
+            JOIN EMPLOYEE E ON A.EMP_NO = E.EMP_NO
+            WHERE A.EMP_NO = #{empNo} 
+              AND A.APPROVAL_STATUS IN ('C', 'R') 
+              AND A.TEMP_SAVE_YN = 'N'
+        )
+        ORDER BY APPLINE_DATE DESC
     </select>
 
 
-    <select id="selectApprovalDetail" parameterType="string" resultType="approvalDto">
+    <select id="selectApprovalDetail" parameterType="string" resultMap="approvalResultMap">
         SELECT 
-            A.DOC_NO, 
-            A.EMP_NO, 
+            A.DOC_NO, A.EMP_NO, 
             TO_CHAR(A.APPROVAL_DATE, 'YYYY-MM-DD') AS APPROVAL_DATE, A.RETENTION_YEAR,
-            A.APPROVAL_TITLE, 
-            A.APPROVAL_CONTENT, 
-            A.APPROVAL_STATUS, 
-            A.APPROVAL_FILE, 
-            A.TEMP_SAVE_YN,
-            E.EMP_NAME,
-            D.DEPT_NAME
+            A.APPROVAL_TITLE, A.APPROVAL_CONTENT, A.APPROVAL_STATUS, 
+            A.APPROVAL_FILE, A.TEMP_SAVE_YN,
+            E.EMP_NAME, D.DEPT_NAME
         FROM APPROVAL A
         JOIN EMPLOYEE E ON A.EMP_NO = E.EMP_NO
         LEFT JOIN DEPARTMENT D ON E.DEPT_CODE = D.DEPT_CODE
@@ -162,15 +178,10 @@
 
     <select id="selectApprovalLineList" parameterType="string" resultType="ApprovalLineDto">
         SELECT 
-            L.APPLINE_NO, 
-            L.DOC_NO, 
-            L.APPROVER_NO, 
-            L.APPLINE_ORDER, 
-            L.APPLINE_STATUS, 
-            L.REJECT_REASON,
+            L.APPLINE_NO, L.DOC_NO, L.APPROVER_NO, L.APPLINE_ORDER, L.APPLINE_STATUS, L.REJECT_REASON,
             TO_CHAR(L.APPLINE_DATE, 'YYYY-MM-DD') AS "appLineDate",  
-            E.EMP_NAME, 
-            P.POSITION_NAME AS "jobName"  FROM APPROVAL_LINE L
+            E.EMP_NAME, P.POSITION_NAME AS "jobName"
+        FROM APPROVAL_LINE L
         JOIN EMPLOYEE E ON L.APPROVER_NO = E.EMP_NO
         LEFT JOIN "POSITION" P ON E.POSITION_CODE = P.POSITION_CODE
         WHERE L.DOC_NO = #{docNo}
@@ -180,8 +191,7 @@
     <select id="selectVacationDetail" parameterType="string" resultType="ApprovalDto">
         SELECT DOC_NO, VACATION_TYPE, 
                TO_CHAR(START_DATE, 'YYYY-MM-DD') AS START_DATE, 
-               TO_CHAR(END_DATE, 'YYYY-MM-DD') AS END_DATE, 
-               TOTAL_USE
+               TO_CHAR(END_DATE, 'YYYY-MM-DD') AS END_DATE, TOTAL_USE
         FROM APPROVAL_VACATION WHERE DOC_NO = #{docNo}
     </select>
 
@@ -195,7 +205,8 @@
         FROM EXPENSE_DETAIL WHERE DOC_NO = #{docNo}
     </select>
     
-<update id="updateApproval" parameterType="approvalDto">
+
+    <update id="updateApproval" parameterType="approvalDto">
         UPDATE APPROVAL
         SET APPROVAL_TITLE = #{approvalTitle},
             APPROVAL_CONTENT = #{approvalContent},
@@ -208,5 +219,111 @@
     <delete id="deleteExpenseDetail"> DELETE FROM EXPENSE_DETAIL WHERE DOC_NO = #{docNo} </delete>
     <delete id="deleteApprovalExpense"> DELETE FROM APPROVAL_EXPENSE WHERE DOC_NO = #{docNo} </delete>
     <delete id="deleteApprovalVacation"> DELETE FROM APPROVAL_VACATION WHERE DOC_NO = #{docNo} </delete>
-   
+    
+    <update id="updateApprovalLineStatus" parameterType="ApprovalLineDto">
+        UPDATE APPROVAL_LINE 
+        SET APPLINE_STATUS = #{appLineStatus}, 
+            APPLINE_DATE = SYSDATE,
+            REJECT_REASON = #{rejectReason, jdbcType=VARCHAR}
+        WHERE DOC_NO = #{docNo} 
+          AND APPROVER_NO = #{approverNo}
+    </update>
+
+    <update id="updateApprovalStatus" parameterType="ApprovalDto">
+        UPDATE APPROVAL SET APPROVAL_STATUS = #{approvalStatus} WHERE DOC_NO = #{docNo}
+    </update>
+
+    <update id="updateApprovalToTemp" parameterType="ApprovalDto">
+        UPDATE APPROVAL 
+        SET TEMP_SAVE_YN = 'Y', 
+        APPROVAL_STATUS = 'W', 
+        APPROVAL_DATE = SYSDATE 
+        WHERE DOC_NO = #{docNo}
+    </update>
+
+    <select id="countRemainingApprovers" parameterType="string" resultType="int">
+        SELECT COUNT(*) 
+        FROM APPROVAL_LINE 
+        WHERE DOC_NO = #{docNo} 
+        AND APPLINE_STATUS = 'W'
+    </select>
+    
+    <select id="countApprovedLines" parameterType="string" resultType="int">
+        SELECT COUNT(*) 
+        FROM APPROVAL_LINE 
+        WHERE DOC_NO = #{docNo} 
+        AND APPLINE_STATUS IN ('C', 'R')
+    </select>
+
+
+    <select id="countWait" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM APPROVAL_LINE L
+        JOIN APPROVAL A ON L.DOC_NO = A.DOC_NO
+        WHERE L.APPROVER_NO = #{empNo}
+          AND L.APPLINE_STATUS = 'W'
+          AND A.APPROVAL_STATUS = 'W'
+          AND A.TEMP_SAVE_YN = 'N'
+    </select>
+
+    <select id="countDraft" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM APPROVAL
+        WHERE EMP_NO = #{empNo}
+          AND APPROVAL_STATUS = 'W'
+          AND TEMP_SAVE_YN = 'N'
+    </select>
+
+    <select id="countApproved" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM APPROVAL A
+        WHERE A.EMP_NO = #{empNo}
+          AND A.APPROVAL_STATUS IN ('C', 'R')
+          AND A.TEMP_SAVE_YN = 'N'
+          AND EXISTS (
+              SELECT 1 
+              FROM APPROVAL_LINE L 
+              WHERE L.DOC_NO = A.DOC_NO 
+                AND L.APPLINE_STATUS IN ('C', 'R') 
+                AND TO_CHAR(L.APPLINE_DATE, 'YYYYMMDD') = TO_CHAR(SYSDATE, 'YYYYMMDD')
+          )
+    </select>
+
+
+    <select id="selectWaitListTop5" parameterType="string" resultMap="approvalResultMap">
+        SELECT * FROM (
+            SELECT 
+                A.DOC_NO,
+                A.APPROVAL_TITLE,
+                TO_CHAR(A.APPROVAL_DATE, 'YYYY-MM-DD') AS APPROVAL_DATE, 
+                M.EMP_NAME,
+                A.APPROVAL_STATUS
+            FROM APPROVAL_LINE L
+            JOIN APPROVAL A ON L.DOC_NO = A.DOC_NO
+            JOIN EMPLOYEE M ON A.EMP_NO = M.EMP_NO
+            WHERE L.APPROVER_NO = #{empNo}
+              AND L.APPLINE_STATUS = 'W'
+              AND A.APPROVAL_STATUS = 'W'
+              AND A.TEMP_SAVE_YN = 'N'
+            ORDER BY A.APPROVAL_DATE DESC 
+        )
+        WHERE ROWNUM &lt;= 5
+    </select>
+
+    <select id="selectDraftListTop5" parameterType="string" resultMap="approvalResultMap">
+        SELECT * FROM (
+            SELECT 
+                DOC_NO,
+                APPROVAL_TITLE,
+                TO_CHAR(APPROVAL_DATE, 'YYYY-MM-DD') AS APPROVAL_DATE, 
+                APPROVAL_STATUS
+            FROM APPROVAL
+            WHERE EMP_NO = #{empNo}
+              AND APPROVAL_STATUS = 'W'
+              AND TEMP_SAVE_YN = 'N'
+              ORDER BY APPROVAL_DATE DESC
+        )
+        WHERE ROWNUM &lt;= 5
+    </select>
+    
 </mapper>
