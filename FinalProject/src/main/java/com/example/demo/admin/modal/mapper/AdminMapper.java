@@ -7,6 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.example.demo.admin.controller.AdminController.CreateEmployeeRequest;
+
 @Mapper
 public interface AdminMapper {
 
@@ -19,5 +21,13 @@ public interface AdminMapper {
 	List<Map<String, Object>> employeeSearch(@Param("keyword") String keyword, @Param("includeResigned") boolean includeResigned);
 
 	Map<String, Object> getEmployee(String empNo);
+
+	String selectNextEmpNoForUpdate();
+
+	int countByEmpId(String empId);
+
+	int insertEmployee(@Param("req") CreateEmployeeRequest req, @Param("encPw") String encPw, @Param("genEmail") String genEmail, @Param("genNickname") String genNickname, @Param("genPhone") String genPhone);
+
+	String selectEmpNoByEmpId(String empId);
 
 }

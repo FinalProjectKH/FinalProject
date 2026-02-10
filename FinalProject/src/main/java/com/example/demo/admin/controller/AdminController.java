@@ -29,6 +29,14 @@ public class AdminController {
 	
 	public record AdminPwRequest(String adminPw) {}
 	
+	public record CreateEmployeeRequest(
+		    String empName,
+		    String empId,
+		    String deptCode,
+		    String positionCode
+		) {}
+
+	
 	@PostMapping("verify-password")
 	public ResponseEntity<Void> verifyPassword(@RequestBody AdminPwRequest req, HttpSession session) {
 
@@ -70,4 +78,17 @@ public class AdminController {
 	public ResponseEntity<Map<String, Object>> getEmployee (@RequestParam("empNo") String empNo) {
 		return ResponseEntity.ok(service.getEmployee (empNo));
 	}
+	
+	@PostMapping("employee")
+	public ResponseEntity<Map<String, Object>> createEmployee(
+	    @RequestBody CreateEmployeeRequest req,
+	    HttpSession session
+	) {
+	    LoginMemberDTO loginMember = (LoginMemberDTO) session.getAttribute("loginMember");
+	    if (loginMember == null) return ResponseEntity.status(401).build();
+	    if (loginMember.getAuthorityLevel() < 3) return ResponseEntity.status(403).build();
+
+	    return ResponseEntity.ok(service.createEmployee(req,loginMember.getEmpNo()));
+	}
+
 }

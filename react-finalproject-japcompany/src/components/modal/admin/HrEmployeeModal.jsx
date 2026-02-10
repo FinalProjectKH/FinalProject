@@ -289,7 +289,7 @@ export default function HrEmployeeModal({ open, onClose }) {
         deptCode: form.deptCode,
         positionCode: form.positionCode,
       }
-    //   const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload); -> 사원 추가 요청 임시 주석 처리함
+      const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload); 
 
       /*
      API 
@@ -299,8 +299,8 @@ export default function HrEmployeeModal({ open, onClose }) {
      VERIFY_ADMIN_PW: "/admin/verify-password",
       */ 
 
-    //   setIssued(res.data);
-    //   setIssuedOpen(true);
+      setIssued(res.data);
+      setIssuedOpen(true);
 
       setAdminPwOpen(false);
       setAdminPw("");

@@ -3,12 +3,14 @@ package com.example.demo.admin.modal.service;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.admin.controller.AdminController.CreateEmployeeRequest;
 import com.example.demo.admin.modal.mapper.AdminMapper;
+import com.example.demo.common.utility.TempPwUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,6 +66,35 @@ public class AdminServiceImpl implements AdminService{
 	@Override
 	public Map<String, Object> getEmployee(String empNo) {
 		return mapper.getEmployee (empNo);
+	}
+
+	@Override
+	public Map<String, Object> createEmployee(CreateEmployeeRequest req, String empNo) {
+		
+		// 기본 이메일
+		String genEmail = req.empId() + "@japcompany.com";
+		//기본 닉네임
+		String genNickname = req.empName();
+		//기본 닉네임
+		String genPhone = "010-****-****";
+		
+        // 1) 임시 비밀번호 생성 (원하시는 정책으로)
+        String tempPw = TempPwUtil.makeTempPw(8); // 예: 8자리
+        String encPw = BCrypt.hashpw(tempPw, BCrypt.gensalt()); // 스프링 시큐리티 쓰면 PasswordEncoder 사용 추천
+
+        // 2) 중복 ID 체크 (선택)
+        int dup = mapper.countByEmpId(req.empId());
+        if (dup > 0) throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
+        
+        // 3) INSERT
+        int inserted = mapper.insertEmployee(req, encPw, genEmail, genNickname, genPhone);
+        if (inserted != 1) throw new RuntimeException("사원 추가에 실패했습니다.");
+        
+        //사번 조회
+        String createdEmpNo = mapper.selectEmpNoByEmpId(req.empId());
+        
+        // 4) 프론트에 1회 표시할 값 리턴
+        return Map.of("empNo", createdEmpNo, "empId", req.empId(), "tempPw", tempPw);
 	}
 
 }

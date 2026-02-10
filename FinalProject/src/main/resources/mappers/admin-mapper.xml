@@ -73,4 +73,47 @@
   WHERE E.EMP_NO = #{empNo}
    </select>
    
+	<!-- 중복 ID 체크-->
+	<select id="countByEmpId" parameterType="string" resultType="int">
+  SELECT COUNT(*)
+  FROM EMPLOYEE
+  WHERE EMP_ID = #{empId}
+	</select>
+
+	<!--INSERT-->
+	<insert id="insertEmployee">
+  INSERT INTO EMPLOYEE (
+    EMP_NO,
+    EMP_NAME,
+    EMP_ID,
+    EMP_PW,
+    EMP_EMAIL,
+    EMP_PHONE,
+    EMP_NICKNAME,
+    DEPT_CODE,
+    POSITION_CODE,
+    EMP_DEL_FL,
+    ENROLL_DATE
+  ) VALUES (
+    LPAD(EMP_NO_SEQ.NEXTVAL, 5, '0'),
+    #{req.empName},
+    #{req.empId},
+    #{encPw},
+    #{genEmail},
+    #{genPhone},
+    #{genNickname},
+    #{req.deptCode},
+    #{req.positionCode},
+    'N',
+    SYSDATE
+  )
+	</insert>
+	
+	<select id="selectEmpNoByEmpId" resultType="string">
+  SELECT EMP_NO
+  FROM EMPLOYEE
+  WHERE EMP_ID = #{empId}
+	</select>
+
+   
 </mapper>
