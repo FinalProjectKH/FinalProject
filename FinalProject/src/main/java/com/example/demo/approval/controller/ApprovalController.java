@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.approval.model.dto.ApprovalDto;
 import com.example.demo.approval.model.service.ApprovalService;
+import com.example.demo.calendar.model.service.CalendarService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ApprovalController {
 	
 	private final ApprovalService service;
+	
 	
 	
 	
@@ -136,23 +138,25 @@ public class ApprovalController {
         }
     }
     
-    /** 상세조회 (게시물 클릭 시)
+    /** 상세조회 (게시물 클릭 시) + 권한 체크 추가
      * @param docNo
+     * @param empNo (🔥 추가됨: 요청자 사번)
      * @return
      */
     @GetMapping("/detail/{docNo}")
-    public ResponseEntity<?> getApprovalDetail(@PathVariable("docNo") String docNo){
+    public ResponseEntity<?> getApprovalDetail(
+            @PathVariable("docNo") String docNo, 
+            @RequestParam(value = "empNo", required = true) String empNo) { // 🔥 empNo 필수
     	
     	try {
-            
-            Map<String, Object> result = service.selectApprovalDetail(docNo);
+            // Service에 docNo와 empNo를 같이 넘김
+            Map<String, Object> result = service.selectApprovalDetail(docNo, empNo);
             	
-            // 만약 문서가 없으면 404 에러 리턴
-            if (result == null || result.get("approval") == null) {
-                return ResponseEntity.status(404).body("존재하지 않는 문서입니다.");
-            }
-            
             return ResponseEntity.ok(result);
+            
+        } catch (IllegalArgumentException e) {
+            // 🔥 서비스에서 "권한 없음" 에러를 던지면 403으로 응답
+            return ResponseEntity.status(403).body(e.getMessage());
             
         } catch (Exception e) {
             e.printStackTrace();
@@ -217,13 +221,13 @@ public class ApprovalController {
             
             Map<String, Object> homeData = service.getHomeData(empNo);
             
-            System.out.println("▶ Service 데이터 수신 완료: " + homeData); // 데이터가 잘 왔는지 눈으로 확인
+            System.out.println("▶ Service 데이터 수신 완료: " + homeData);
             
             return ResponseEntity.ok(homeData);
 
         } catch (Exception e) {
             // 🔥 [중요] 에러의 진짜 원인을 콘솔에 출력합니다!
-            System.err.println("🚨 [ApprovalController 에러 발생] 🚨");
+            System.err.println("ApprovalController 에러 발생");
             e.printStackTrace(); 
             
             // 프론트엔드가 JSON을 기대하므로 에러도 JSON으로 보냅니다.
