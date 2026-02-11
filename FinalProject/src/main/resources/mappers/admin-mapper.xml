@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.demo.admin.modal.mapper.AdminMapper">
+
+   <select id="selectAdminHash">
+   SELECT EMP_PW 
+   FROM EMPLOYEE 
+   WHERE EMP_NO =#{empNo}
+   </select>
+   
+   <select id="fetchDeptList" resultType="map">
+   SELECT DEPT_CODE AS deptCode, DEPT_NAME AS deptName
+   FROM DEPARTMENT
+   </select>
+   
+   <select id="fetchPositionList" resultType="map">
+   SELECT POSITION_CODE AS positionCode, POSITION_NAME AS positionName
+   FROM POSITION
+   </select>
+   
+   <select id="employeeSearch" resultType="map">
+   		SELECT
+		E.EMP_NO,
+		E.EMP_NAME,
+		E.EMP_ID,
+		E.EMP_PW,
+		E.EMP_EMAIL,
+		E.EMP_NICKNAME,
+		E.EMP_PHONE,
+		TO_CHAR(E.ENROLL_DATE, 'YYYY-MM-DD') AS ENROLL_DATE,
+		E.EMP_DEL_FL,
+		E.INTRODUCTION,
+		E.PROFILE_IMG,
+		P.POSITION_NAME,
+		P.AUTHORITY_LEVEL,
+		D.DEPT_NAME
+		FROM EMPLOYEE E
+		JOIN POSITION P ON E.POSITION_CODE = P.POSITION_CODE
+		LEFT JOIN DEPARTMENT D ON E.DEPT_CODE = D.DEPT_CODE
+		WHERE 
+		(
+      	   E.EMP_NAME      LIKE '%' || #{keyword} || '%'
+   		OR E.EMP_ID        LIKE '%' || #{keyword} || '%'
+   		OR E.EMP_NO        LIKE '%' || #{keyword} || '%'
+   		OR D.DEPT_NAME     LIKE '%' || #{keyword} || '%'
+   		OR P.POSITION_NAME LIKE '%' || #{keyword} || '%'
+		)
+		<if test="includeResigned == false">
+  		AND E.EMP_DEL_FL = 'N'
+		</if>
+		ORDER BY E.EMP_NO
+   </select>
+   
+   <select id="getEmployee">
+     SELECT
+    E.EMP_NO,
+    E.EMP_NAME,
+    E.EMP_ID,
+    E.EMP_EMAIL,
+    E.EMP_PHONE,
+    TO_CHAR(E.ENROLL_DATE, 'YYYY-MM-DD') AS ENROLL_DATE,
+    E.EMP_DEL_FL,
+    E.INTRODUCTION,
+    E.PROFILE_IMG,
+    E.DEPT_CODE,
+    E.POSITION_CODE,
+    D.DEPT_NAME,
+    P.POSITION_NAME,
+    P.AUTHORITY_LEVEL
+  FROM EMPLOYEE E
+  JOIN POSITION P ON E.POSITION_CODE = P.POSITION_CODE
+  LEFT JOIN DEPARTMENT D ON E.DEPT_CODE = D.DEPT_CODE
+  WHERE E.EMP_NO = #{empNo}
+   </select>
+   
+	<!-- 중복 ID 체크-->
+	<select id="countByEmpId" parameterType="string" resultType="int">
+  SELECT COUNT(*)
+  FROM EMPLOYEE
+  WHERE EMP_ID = #{empId}
+	</select>
+
+	<!--INSERT-->
+	<insert id="insertEmployee">
+  INSERT INTO EMPLOYEE (
+    EMP_NO,
+    EMP_NAME,
+    EMP_ID,
+    EMP_PW,
+    EMP_EMAIL,
+    EMP_PHONE,
+    EMP_NICKNAME,
+    DEPT_CODE,
+    POSITION_CODE,
+    EMP_DEL_FL,
+    ENROLL_DATE
+  ) VALUES (
+    LPAD(EMP_NO_SEQ.NEXTVAL, 5, '0'),
+    #{req.empName},
+    #{req.empId},
+    #{encPw},
+    #{genEmail},
+    #{genPhone},
+    #{genNickname},
+    #{req.deptCode},
+    #{req.positionCode},
+    'N',
+    SYSDATE
+  )
+	</insert>
+	
+	<select id="selectEmpNoByEmpId" resultType="string">
+  SELECT EMP_NO
+  FROM EMPLOYEE
+  WHERE EMP_ID = #{empId}
+	</select>
+
+   
+</mapper>

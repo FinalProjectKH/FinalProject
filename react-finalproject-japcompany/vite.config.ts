@@ -35,6 +35,10 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_BASE_URL || 'http://localhost',
           changeOrigin: true,
         },
+        "/admin": {
+          target: env.VITE_BASE_URL || 'http://localhost',
+          changeOrigin: true,
+        },
       },
     },
   };
