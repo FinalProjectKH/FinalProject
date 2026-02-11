@@ -42,7 +42,7 @@ const App = () => {
         }
       />
 
-<Route
+      <Route
         path="/approval"
         element={
           <ProtectedRoute>
