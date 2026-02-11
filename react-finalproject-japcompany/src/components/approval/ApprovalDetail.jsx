@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-// 🔥 [수정] FaTimesCircle 추가됨!
 import { FaArrowLeft, FaCheck, FaTimes, FaEdit, FaTrash, FaPaperclip, FaTimesCircle } from 'react-icons/fa';
 
 import GeneralForm from './forms/GeneralForm';
@@ -21,18 +20,32 @@ export default function ApprovalDetail() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
-  // 1. 내 정보 로드
+  // 1. 내 정보 로드 (로그인한 사번 가져오기)
   useEffect(() => {
     fetch('/employee/myInfo')
       .then(res => res.json())
-      .then(member => setMyEmpNo(member.empNo))
+      .then(member => {
+          console.log("내 사번 로드 완료:", member.empNo);
+          setMyEmpNo(member.empNo);
+      })
       .catch(err => console.error(err));
   }, []);
 
-  // 2. 데이터 로드
+  // 2. 데이터 로드 (🔥 수정된 부분)
   useEffect(() => {
-    fetch(`/api/approval/detail/${docNo}`)
+    // 1) 문서번호가 없거나, 아직 내 사번(myEmpNo)을 못 가져왔으면 요청하지 않고 대기
+    if (!docNo || !myEmpNo) return; 
+
+    // 2) URL 뒤에 ?empNo=${myEmpNo} 추가
+    fetch(`/api/approval/detail/${docNo}?empNo=${myEmpNo}`)
       .then(res => {
+        // 400, 403 에러 처리
+        if (res.status === 403) {
+            throw new Error("조회 권한이 없습니다.");
+        }
+        if (res.status === 400) {
+            throw new Error("잘못된 요청입니다. (사번 누락)");
+        }
         if (!res.ok) throw new Error("문서를 찾을 수 없습니다.");
         return res.json();
       })
@@ -44,7 +57,7 @@ export default function ApprovalDetail() {
         alert(err.message);
         navigate('/approval');
       });
-  }, [docNo, navigate]);
+  }, [docNo, myEmpNo, navigate]); // 🔥 myEmpNo가 로드되면 이 useEffect가 다시 실행됨
 
   // (1) 폼 데이터 가공
   const formData = useMemo(() => {
@@ -209,6 +222,7 @@ export default function ApprovalDetail() {
   };
 
   const handleFileDownload = (fileName) => {
+    // 다운로드 보안 처리를 위해 URL 변경이 필요하면 여기서 수정
     const fileUrl = `/uploads/approval/${fileName}`;
     window.open(fileUrl, '_blank');
   };
@@ -284,7 +298,7 @@ export default function ApprovalDetail() {
               </h3>
               <div className="text-sm text-red-700 mb-3">
                 결재자 <span className="font-bold underline">
-                   {data.lines.find(line => line.appLineStatus === 'R')?.empName}
+                    {data.lines.find(line => line.appLineStatus === 'R')?.empName}
                 </span> 님의 의견:
               </div>
               <div className="bg-white border border-red-200 rounded p-4 text-gray-800 text-sm leading-relaxed whitespace-pre-wrap shadow-inner">
