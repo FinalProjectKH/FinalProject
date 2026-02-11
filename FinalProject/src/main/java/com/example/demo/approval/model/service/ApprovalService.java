@@ -29,5 +29,7 @@ public interface ApprovalService {
 
 	Map<String, Object> getHomeData(String empNo);
 
+	int grantAnnualLeaveAll(String year);
+
 
 }
