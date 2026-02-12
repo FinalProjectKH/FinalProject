@@ -74,9 +74,16 @@ public class ApprovalServiceImpl implements ApprovalService {
         }
         
         // ========================================================
-        // 🛡️ [추가] 휴가 신청 시 '잔여 연차' 확인 (TOTAL_VACATION)
+        // 🛡️ [수정] 휴가 신청 시 '잔여 연차' 확인 로직 (안전 장치 추가)
         // ========================================================
-        if (dto.getVacationType() != null && !dto.getVacationType().isEmpty()) {
+        // 1. 날짜가 비어있지 않은지 확인
+        boolean hasDates = dto.getStartDate() != null && !dto.getStartDate().isEmpty() 
+                        && dto.getEndDate() != null && !dto.getEndDate().isEmpty();
+
+        // 2. [조건] 휴가 타입 존재 AND 날짜 존재 AND '임시저장'이 아닐 때만 검사 수행
+        if (dto.getVacationType() != null && !dto.getVacationType().isEmpty() 
+            && hasDates 
+            && "N".equals(dto.getTempSaveYn())) {
             
             // 1. 현재 연도 구하기 (String "2026")
             String currentYear = String.valueOf(LocalDate.now().getYear());
@@ -84,7 +91,7 @@ public class ApprovalServiceImpl implements ApprovalService {
             // 2. 사용 일수 계산 (주말 제외)
             double useCount = calculateVacationDays(dto.getStartDate(), dto.getEndDate(), dto.getVacationType());
             
-            // 3. 내 연차 정보 가져오기 (Mapper에 메서드 추가 필수!)
+            // 3. 내 연차 정보 가져오기
             TotalVacationDto myVacation = mapper.selectTotalVacation(dto.getEmpNo(), currentYear);
             
             // 정보가 없으면 예외 처리
@@ -355,29 +362,53 @@ public class ApprovalServiceImpl implements ApprovalService {
     // ========================================================
     // 📅 [Helper] 주말(토,일) 제외하고 연차 사용일수 계산
     // ========================================================
-    private double calculateVacationDays(String startDate, String endDate, String type) {
-        // 반차는 무조건 0.5일
+private double calculateVacationDays(String startDate, String endDate, String type) {
+        
+        // 1. 날짜 없으면 0 리턴
+        if (startDate == null || startDate.isEmpty() || endDate == null || endDate.isEmpty()) {
+            return 0.0;
+        }
+
+        // 2. 반차는 공휴일 상관없이 무조건 0.5일
         if (type != null && type.contains("반차")) {
             return 0.5;
         }
 
+        // 3. 🔥 [핵심] DB에서 기간 내 '공휴일' 날짜 리스트 가져오기
+        // (YYYY-MM-DD 형식을 YYYYMMDD로 변환해서 조회함)
+        List<String> holidays = mapper.selectHolidayList(startDate, endDate);
+        
         LocalDate start = LocalDate.parse(startDate);
         LocalDate end = LocalDate.parse(endDate);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd"); // 비교용 포맷
         
         double count = 0;
         
+        // 4. 하루씩 반복하며 체크
         for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
             DayOfWeek day = date.getDayOfWeek();
-            // 토요일(SATURDAY) 아니고, 일요일(SUNDAY) 아니면 카운트
-            if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
-                count++;
+            String dateStr = date.format(formatter); // 예: "20260505"
+            
+            // (1) 주말 체크 (토, 일이면 패스)
+            if (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) {
+                continue; 
             }
+            
+            // (2) 공휴일 체크 (DB 리스트에 있으면 패스) 🔥
+            if (holidays.contains(dateStr)) {
+                log.info("📢 공휴일 감지됨 (차감 제외): {}", dateStr);
+                continue;
+            }
+
+            // 평일이고 공휴일도 아니면 카운트
+            count++;
         }
+        
         return count;
     }
     
     
- // ========================================================
+    // ========================================================
     // 👑 [관리자] 전 직원 연차 일괄 생성 (20개)
     // ========================================================
     @Override

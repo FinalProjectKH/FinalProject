@@ -160,7 +160,7 @@ export default function VacationForm({ data, onChange, approvalLines = [], login
 
           <tr>
             <td style={{ background: "#ddd", padding: "5px", border: "1px solid black", fontWeight: "bold", textAlign: "center" }}>신청 사유</td>
-            <td style={{ padding: "10px", border: "1px solid black", height: "300px", verticalAlign: "top" }}>
+            <td style={{ padding: "10px", border: "1px solid black", height: "600px", verticalAlign: "top" }}>
               <textarea 
                  name="approvalContent" 
                  value={data.approvalContent || ''} 

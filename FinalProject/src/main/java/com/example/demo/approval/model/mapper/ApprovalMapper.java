@@ -106,4 +106,10 @@ public interface ApprovalMapper {
 	// 3. 연차 20개 생성 (INSERT)
 	int insertTotalVacation(TotalVacationDto dto);
 
+	// 공휴일 체크
+	List<String> selectHolidayList(
+	        @Param("startDate") String startDate, 
+	        @Param("endDate") String endDate
+	    );
+
 }

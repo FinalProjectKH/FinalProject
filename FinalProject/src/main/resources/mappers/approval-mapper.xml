@@ -361,5 +361,14 @@
         #{year}, #{empNo}, #{totalDays}, 0, #{remainDays}
     )
 	</insert>
+	
+	<select id="selectHolidayList" resultType="string">
+    SELECT TO_CHAR(START_DATE, 'YYYYMMDD')  FROM CALENDAR
+    WHERE TYPE_ID = '3' AND CAL_CONTENT = '공휴일'
+      AND (
+          TO_CHAR(START_DATE, 'YYYYMMDD')   BETWEEN REPLACE(#{startDate}, '-', '') AND REPLACE(#{endDate}, '-', '')
+      )
+	</select>
+	
     
 </mapper>
