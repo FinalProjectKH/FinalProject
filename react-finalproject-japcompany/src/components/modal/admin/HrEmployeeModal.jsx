@@ -69,13 +69,16 @@ export default function HrEmployeeModal({ open, onClose }) {
           deptCode: item.DEPTCODE,
           deptName: item.DEPTNAME
         }));
-        console.log("deptOptions:", res.data); 
+        // *부서 선택 리스트 확인 콘솔로그*/
+        // console.log("deptOptions:", res.data); 
         setDeptOptions(res.data);
     };
 
     const fetchPositionList=async()=> {
         const res =  await axiosApi.get("/admin/fetchPositionList");
-         console.log("positionOptions:", res.data); 
+        // 직급 선택 리스트 확인 콘솔로그
+        //  console.log("positionOptions:", res.data); 
+
          // 데이터를 소문자로 변환해서 저장
         const formatted = res.data.map(item => ({
           positionCode: item.POSITIONCODE,
@@ -309,9 +312,6 @@ export default function HrEmployeeModal({ open, onClose }) {
     try {
       setMsg({ type: "", text: "" });
       
-      //관리자 비번 검증 (공통)
-      await axiosApi.post(API.VERIFY_ADMIN_PW, { adminPw });
-      
       //추가
       if (adminAction === "create") {
         if (!window.confirm("사원을 추가하시겠습니까?")) return;
@@ -332,8 +332,19 @@ export default function HrEmployeeModal({ open, onClose }) {
 
     //수정
     if (adminAction === "update") {
+      if (!viewEmp?.empNo) return;
       if (!window.confirm("사원 정보를 수정하시겠습니까?")) return;
       console.log("수정 API 호출:", viewEmp.empNo);
+      const payload = {
+        empNo: viewEmp?.empNo, 
+        empName: form.empName.trim(),
+        empId: form.empId.trim(),
+        deptCode: form.deptCode,
+        positionCode: form.positionCode,
+      }
+      const res = await axiosApi.put("/admin/update", payload);
+      await fetchEmployeeList();
+      setMsg({ type: "success", text: "직원 정보가 수정되었습니다." });
     }
 
     //퇴사/복귀
@@ -342,6 +353,9 @@ export default function HrEmployeeModal({ open, onClose }) {
       if (!window.confirm(`해당 직원을 ${action} 처리하시겠습니까?`)) return;
       console.log(`${action} API 호출:`, viewEmp.empNo);
     }
+
+    //관리자 비번 검증 (공통)
+    await axiosApi.post(API.VERIFY_ADMIN_PW, { adminPw });
 
       setAdminPwOpen(false);
       setAdminPw("");

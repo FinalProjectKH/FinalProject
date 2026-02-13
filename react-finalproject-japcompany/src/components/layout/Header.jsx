@@ -46,6 +46,9 @@ const Header = () => {
           <div className="w-10 h-10 rounded-[10px] bg-wait-400 shadow-[0_14px_30px_rgba(0,0,0,0.18)]" >
             <img
               src={user?.profileImg || userDefaultImg}
+              onError={(e) => {
+              e.currentTarget.src = userDefaultImg;
+          }}
               className="w-full h-full rounded-[10px] object-cover"
             />
           </div>
