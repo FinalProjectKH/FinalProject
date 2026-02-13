@@ -1,5 +1,6 @@
 package com.example.demo.admin.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.admin.modal.service.AdminService;
+import com.example.demo.approval.model.service.ApprovalService;
 import com.example.demo.employee.model.dto.LoginMemberDTO;
 
 import jakarta.servlet.http.HttpSession;
@@ -29,6 +31,8 @@ import lombok.RequiredArgsConstructor;
 public class AdminController {
 	
 	private final AdminService service;
+	
+	private final ApprovalService approvalService;
 	
 	public record AdminPwRequest(String adminPw) {}
 	
@@ -122,5 +126,25 @@ public class AdminController {
                     .body(Map.of("message", "서버 오류")); // 500
 		}
 	}
+	// 주영
+	// 연차 일괄 생성 (관리자용)
+    @PostMapping("grant-leave")
+    public ResponseEntity<?> grantAnnualLeave(@RequestParam(value="year", required=false) String year) {
+        
+        try {
+            // 연도가 안 넘어오면 올해로 자동 설정
+            if (year == null || year.isEmpty()) {
+                year = String.valueOf(LocalDate.now().getYear());
+            }
+            
+            int count = approvalService.grantAnnualLeaveAll(year);
+            
+            return ResponseEntity.ok(year + "년도 연차가 " + count + "명에게 생성되었습니다.");
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("연차 생성 중 오류 발생");
+        }
+    }
 
 }

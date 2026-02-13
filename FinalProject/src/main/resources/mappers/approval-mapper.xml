@@ -326,4 +326,40 @@
         WHERE ROWNUM &lt;= 5
     </select>
     
+    <select id="selectTotalVacation" resultType="com.example.demo.approval.model.dto.TotalVacationDto">
+    SELECT YEAR, EMP_NO, TOTAL_DAYS, USED_DAYS, REMAIN_DAYS
+    FROM TOTAL_VACATION
+    WHERE EMP_NO = #{empNo}
+      AND YEAR = #{year}
+	</select>
+
+	<update id="updateVacationUsage">
+    UPDATE TOTAL_VACATION
+    SET USED_DAYS = USED_DAYS + #{count},
+        REMAIN_DAYS = REMAIN_DAYS - #{count}
+    WHERE EMP_NO = #{empNo}
+      AND YEAR = #{year}
+	</update>
+	
+	<select id="selectAllActiveEmpNos" resultType="string">
+    SELECT EMP_NO
+    FROM EMPLOYEE
+    WHERE EMP_DEL_FL = 'N'
+	</select>
+
+	<select id="countVacationData" resultType="_int">
+    SELECT COUNT(*)
+    FROM TOTAL_VACATION
+    WHERE EMP_NO = #{empNo}
+      AND YEAR = #{year}
+	</select>
+
+	<insert id="insertTotalVacation">
+    INSERT INTO TOTAL_VACATION (
+        YEAR, EMP_NO, TOTAL_DAYS, USED_DAYS, REMAIN_DAYS
+    ) VALUES (
+        #{year}, #{empNo}, #{totalDays}, 0, #{remainDays}
+    )
+	</insert>
+    
 </mapper>

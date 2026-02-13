@@ -1,9 +1,5 @@
 // src/components/modal/admin/HrEmployeeModal.jsx
-// ✅ 추가: 검색 결과 리스트(스크롤/하이라이트/퇴사자 포함 토글) UI까지 완성본
-// - 상단: 검색창 + (퇴사자 포함 토글) + 검색 버튼
-// - 결과: 좌측 리스트(스크롤, 선택 하이라이트, 퇴사 배지, 키워드 하이라이트)
-// - 우측: 증명사진 + 전체 조회(읽기 전용)
-// - 하단: 사원 추가(이름/아이디/부서명/직급명) + 관리자 비번 확인 + 임시비번 1회 표시
+// ✅ 수정됨: 연차 일괄 생성 기능 추가 (CalendarPlus 아이콘, grant_leave 액션 처리)
 
 import { useEffect, useMemo, useState } from "react";
 import DraggableModal from "../DraggableModal";
@@ -14,6 +10,7 @@ import {
   Check,
   UserPlus,
   Search as SearchIcon,
+  CalendarPlus, // 🔥 [추가] 아이콘
 } from "lucide-react";
 import { axiosApi } from "../../../api/axiosAPI"; 
 import { createPortal } from "react-dom";
@@ -26,6 +23,7 @@ const API = {
   SEARCH_EMPLOYEES: "/admin/employee/search",
   GET_EMPLOYEE: "/admin/getEmployee",
   VERIFY_ADMIN_PW: "/admin/verify-password",
+  GRANT_LEAVE: "/admin/grant-leave", // 🔥 [추가] 연차 생성 API
 };
 
 const ID_HINT =
@@ -47,12 +45,13 @@ export default function HrEmployeeModal({ open, onClose }) {
   const [includeResigned, setIncludeResigned] = useState(false);
 
   const [results, setResults] = useState([]); // 리스트용 (간단 필드)
-  // 결과 예시: { empNo, empName, empId, deptName, positionName, empDelFl, profileImg }
   const [selectedEmpNo, setSelectedEmpNo] = useState(null);
   const [employeeDetail, setEmployeeDetail] = useState(null);
+  
   //검색 여부
   const isEditMode = selectedEmpNo !== null;
-  // 수정 / 추가 모드 상태 ( "create" | "update" | "resign" )
+  
+  // 수정 / 추가 / 퇴사 / 연차생성 모드 상태 ( "create" | "update" | "resign" | "grant_leave" )
   const [adminAction, setAdminAction] = useState(null); 
 
   //부서 / 직급 조회
@@ -71,7 +70,7 @@ export default function HrEmployeeModal({ open, onClose }) {
         }));
         // *부서 선택 리스트 확인 콘솔로그*/
         // console.log("deptOptions:", res.data); 
-        setDeptOptions(res.data);
+        setDeptOptions(formatted);
     };
 
     const fetchPositionList=async()=> {
@@ -84,7 +83,7 @@ export default function HrEmployeeModal({ open, onClose }) {
           positionCode: item.POSITIONCODE,
           positionName: item.POSITIONNAME
         }));
-        setPositionOptions(res.data);
+        setPositionOptions(formatted);
     };
 
     fetchDeptList();
@@ -113,9 +112,6 @@ export default function HrEmployeeModal({ open, onClose }) {
   useEffect(() => {
   if (!open) return;
 
-  console.log("selectedEmpNo:", selectedEmpNo);
-
-
   // 선택 해제 시 초기화
   if (!selectedEmpNo) {
     setEmployeeDetail(null);
@@ -133,13 +129,11 @@ export default function HrEmployeeModal({ open, onClose }) {
   (async () => {
     try {
       const res = await axiosApi.get(API.GET_EMPLOYEE, {
-        params: { empNo: selectedEmpNo }, // 서버 파라미터명이 다르면 여기만 수정
+        params: { empNo: selectedEmpNo }, 
       });
 
       const r = res.data;
-      console.log("getEmployee res.data =", r);
 
-      // ✅ 대문자/소문자 둘 다 대응해서 “프론트용 키”로 통일
       const d = {
         empNo: r.empNo ?? r.EMP_NO,
         empName: r.empName ?? r.EMP_NAME,
@@ -157,9 +151,6 @@ export default function HrEmployeeModal({ open, onClose }) {
       };
 
       setEmployeeDetail(d);
-
-
-
 
       // 하단 폼에도 같이 채움(조회/수정 겸용)
       setForm((p) => ({
@@ -235,7 +226,7 @@ export default function HrEmployeeModal({ open, onClose }) {
     const q = keyword.trim();
     if (!q) {
       setResults([]);
-      setSelectedEmpNo(null);
+      setSelectedEmpNo(list.some(e => e.empNo === prev) ? prev : (list[0]?.empNo ?? null));
       setMsg({ type: "info", text: "검색어를 입력하세요." });
       return;
     }
@@ -259,9 +250,6 @@ export default function HrEmployeeModal({ open, onClose }) {
       profileImg: e.profileImg ?? e.PROFILE_IMG,
     }));
 
-    console.log("list[0] =", list[0]);
-    console.log("list[0].empNo / EMP_NO =", list[0]?.empNo, list[0]?.EMP_NO);
-
     setResults(list);
     setSelectedEmpNo(list[0]?.empNo ?? null);
 
@@ -279,18 +267,15 @@ export default function HrEmployeeModal({ open, onClose }) {
   const onSelectClear = () => {
     setSelectedEmpNo(null);
     setAdminAction(null);
-}
+  }
 
-  /* ===== 추가 버튼 ===== */
+  /* ===== 버튼 핸들러 ===== */
   const onClickCreate = () => {
     setAdminAction("create");
-    console.log("onClickCreate fired"); 
     setMsg({ type: "", text: "" });
     const err = validate();
-    console.log("validate err:", err); 
     if (err) return setMsg({ type: "error", text: err });
     setAdminPwOpen(true);
-    console.log("adminPwOpen -> true (after set)");
   };
 
   const onClickUpdate = () => {
@@ -305,6 +290,13 @@ export default function HrEmployeeModal({ open, onClose }) {
     setAdminPwOpen(true);
   };
 
+  // 🔥 [추가] 연차 생성 버튼 핸들러
+  const onClickGrantLeave = () => {
+    setAdminAction("grant_leave");
+    setMsg({ type: "", text: "" }); // 메시지 초기화
+    setAdminPwOpen(true); // 비밀번호 확인창 띄우기
+  };
+
 
   const submitWithAdminPw = async () => {
     if (!adminPw) return;
@@ -313,24 +305,26 @@ export default function HrEmployeeModal({ open, onClose }) {
       setMsg({ type: "", text: "" });
       
       //추가
+      //관리자 비번 검증 (공통)
+      await axiosApi.post(API.VERIFY_ADMIN_PW, { adminPw });
+      
+      // 1. 사원 추가
       if (adminAction === "create") {
         if (!window.confirm("사원을 추가하시겠습니까?")) return;
-      const payload = {
-        empName: form.empName.trim(),
-        empId: form.empId.trim(),
-        deptCode: form.deptCode,
-        positionCode: form.positionCode,
-      }
-      const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload); 
+        const payload = {
+            empName: form.empName.trim(),
+            empId: form.empId.trim(),
+            deptCode: form.deptCode,
+            positionCode: form.positionCode,
+        }
+        const res = await axiosApi.post(API.CREATE_EMPLOYEE, payload); 
 
-      setIssued(res.data);
-      setIssuedOpen(true);
-
-      //setForm({ empName: "", empId: "", deptName: "", positionName: "" });
-      setMsg({ type: "success", text: "사원이 추가되었습니다. 임시 비밀번호를 확인하세요." });
+        setIssued(res.data);
+        setIssuedOpen(true);
+        setMsg({ type: "success", text: "사원이 추가되었습니다. 임시 비밀번호를 확인하세요." });
       }
 
-    //수정
+    //2. 사원 수정
     if (adminAction === "update") {
       if (!viewEmp?.empNo) return;
       if (!window.confirm("사원 정보를 수정하시겠습니까?")) return;
@@ -343,16 +337,32 @@ export default function HrEmployeeModal({ open, onClose }) {
         positionCode: form.positionCode,
       }
       const res = await axiosApi.put("/admin/update", payload);
-      await fetchEmployeeList();
+      await onSearch();
       setMsg({ type: "success", text: "직원 정보가 수정되었습니다." });
     }
 
-    //퇴사/복귀
-    if (adminAction === "resign") {
-      const action = viewEmp.empDelFl === "Y" ? "복귀" : "퇴사";
-      if (!window.confirm(`해당 직원을 ${action} 처리하시겠습니까?`)) return;
-      console.log(`${action} API 호출:`, viewEmp.empNo);
-    }
+      // 3. 퇴사/복귀
+      if (adminAction === "resign") {
+        const action = viewEmp.empDelFl === "Y" ? "복귀" : "퇴사";
+        if (!window.confirm(`해당 직원을 ${action} 처리하시겠습니까?`)) return;
+        console.log(`${action} API 호출:`, viewEmp.empNo);
+      }
+
+      // 4. 🔥 [추가] 연차 일괄 생성 로직
+      if (adminAction === "grant_leave") {
+        const year = new Date().getFullYear();
+        if (!window.confirm(`${year}년도 전 직원 연차(20개)를 생성하시겠습니까?\n(이미 생성된 직원은 제외됩니다)`)) {
+            setAdminPwOpen(false);
+            return;
+        }
+
+        const res = await axiosApi.post(API.GRANT_LEAVE, null, {
+            params: { year } 
+        });
+        
+        // 서버에서 String 메시지를 리턴하므로 res.data를 바로 사용
+        setMsg({ type: "success", text: res.data || "연차 생성이 완료되었습니다." });
+      }
 
     //관리자 비번 검증 (공통)
     await axiosApi.post(API.VERIFY_ADMIN_PW, { adminPw });
@@ -559,8 +569,20 @@ export default function HrEmployeeModal({ open, onClose }) {
                 <UserPlus size={16} className="text-black/60" />
                 인사 정보 관리
               </div>
-              <div className="text-[11px] text-black/45">* 비밀번호는 서버에서 임시 발급</div>
+              
+              {/* 🔥 [추가] 연차 일괄 생성 버튼을 여기에 배치 (우측) */}
+              <button
+                 type="button"
+                 onClick={onClickGrantLeave}
+                 className="text-xs px-3 py-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-800 border border-emerald-600/20 transition flex items-center gap-1.5"
+                 title={`${new Date().getFullYear()}년도 연차 생성`}
+              >
+                 <CalendarPlus size={14} />
+                 연차 일괄 생성
+              </button>
             </div>
+            
+            <div className="mt-1 mb-3 text-[11px] text-black/45">* 비밀번호는 서버에서 임시 발급됩니다.</div>
 
             <div className="mt-3 grid grid-cols-2 gap-3">
               <Input
@@ -586,8 +608,8 @@ export default function HrEmployeeModal({ open, onClose }) {
               >
                 <option key="__placeholder" value="">부서 선택</option>
                 {deptOptions.map(d =>(
-                    <option key={d.DEPTCODE} value={d.DEPTCODE}>
-                        {d.DEPTNAME}
+                    <option key={d.deptCode} value={d.deptCode}>
+                        {d.deptName}
                     </option>
                 ))}
               </select>
@@ -595,14 +617,14 @@ export default function HrEmployeeModal({ open, onClose }) {
               <select 
                 key="position-select"         
                 value={form.positionCode}
-                onChange={(e) => setForm((p) => ({ ...p, positionCode: e.target.value }))}
+                onChange={(e) => setForm((p) => ({ ...p, positionCode: e.target.value.trim }))}
                 className="rounded-xl border border-white/15 bg-white/10 px-3 py-2
                            text-[13px] text-black/85 outline-none"
               >  
                 <option key="__empty_position" value="">직급 선택</option>
                 {positionOptions.map(o => (
-                    <option key={o.POSITIONCODE} value={o.POSITIONCODE}>
-                        {o.POSITIONNAME}
+                    <option key={o.positionCode} value={o.positionCode}>
+                        {o.positionName}
                     </option>
                 ))}
               </select>
@@ -640,15 +662,15 @@ export default function HrEmployeeModal({ open, onClose }) {
               ) : (
                   <div className="flex gap-2">
                     <button
-                     type="button" 
-                     onClick={onClickUpdate}
-                     disabled={!isDirty}
-                     className={`
-                      text-xs px-3 py-2 rounded-xl
-                      bg-black/80 text-white hover:bg-black transition
-                      flex items-center gap-2
-                      ${!isDirty ? "opacity-60 cursor-not-allowed" : ""}
-                      `}
+                      type="button" 
+                      onClick={onClickUpdate}
+                      disabled={!isDirty}
+                      className={`
+                       text-xs px-3 py-2 rounded-xl
+                       bg-black/80 text-white hover:bg-black transition
+                       flex items-center gap-2
+                       ${!isDirty ? "opacity-60 cursor-not-allowed" : ""}
+                       `}
                     >
                       <Save size={14} /> 수정
                     </button>
@@ -715,7 +737,7 @@ function AdminPwConfirmModal({ open, onClose, adminPw, setAdminPw, onConfirm, er
       <div className="w-[420px] rounded-2xl bg-white/70 backdrop-blur-xl border border-white/30 shadow-xl p-4">
         <div className="text-[14px] font-semibold text-black/85">관리자 비밀번호 확인</div>
         <div className="mt-2 text-xs text-black/60">
-          * 사원 추가는 관리자 권한이 필요합니다. 비밀번호를 입력해 주세요.
+          * 이 작업은 관리자 권한이 필요합니다. 비밀번호를 입력해 주세요.
         </div>
 
         <div className="mt-4">
