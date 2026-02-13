@@ -30,10 +30,8 @@ import lombok.RequiredArgsConstructor;
 public class CalendarController {
 
     private final CalendarService calendarService;
-
-    // ==========================================
+    
     // 1. 일정(Event)
-    // ==========================================
 
     @GetMapping 
     public List<CalendarDto> getEvents(
@@ -64,9 +62,7 @@ public class CalendarController {
     }
 
 
-    // ==========================================
     // 2. 카테고리(Category) 
-    // ==========================================
     
     // [GET] 카테고리 조회
     @GetMapping("/categories")

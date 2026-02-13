@@ -1,6 +1,7 @@
 package com.example.demo.approval.model.mapper;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -111,5 +112,12 @@ public interface ApprovalMapper {
 	        @Param("startDate") String startDate, 
 	        @Param("endDate") String endDate
 	    );
+
+	String selectDeductYn(String type);
+
+	Map<String, Object> selectSidebarCounts(String empNo);
+
+	void deleteApproval(String docNo);
+
 
 }

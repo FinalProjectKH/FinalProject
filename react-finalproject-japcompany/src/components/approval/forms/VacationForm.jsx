@@ -1,19 +1,94 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 
 // 🔥 props에 loginMember, readOnly 추가
 export default function VacationForm({ data, onChange, approvalLines = [], loginMember, readOnly }) {
+  
+  // 1. 상태 관리 (계산된 차감 일수 저장용)
+  const [calculatedDays, setCalculatedDays] = useState(0.0);
+
   const today = new Date().toLocaleDateString('ko-KR', {
     year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short'
   });
 
-  // 🔥 기안일 로직 추가
+  // 기안일 로직
   const writeDate = data.approvalDate || today;
 
+  // 결재선 빈칸 채우기 로직
   const maxApprovers = 3;
   const displayLines = [...approvalLines];
   while (displayLines.length < maxApprovers) {
     displayLines.push(null); 
   }
+
+  // =================================================================
+  // 2. 🔥 [핵심 로직] 백엔드 계산기 API 호출
+  // =================================================================
+  const fetchCalculatedDays = useCallback(async () => {
+    // 필수값이 없으면 계산 안 함
+    if (!data.startDate || !data.endDate || !data.vacationType) {
+      setCalculatedDays(0);
+      return;
+    }
+
+    try {
+      // 백엔드에 "이 날짜면 며칠 차감이야?" 라고 물어봄
+      const response = await axios.get('/api/approval/calculate-days', {
+        params: {
+          start: data.startDate,
+          end: data.endDate,
+          type: data.vacationType
+        }
+      });
+      setCalculatedDays(response.data); // 결과값 저장
+      
+      // (선택) 부모에게 차감 일수 전달이 필요하다면 여기서 onChange를 호출해줄 수도 있음
+      // 하지만 지금 구조상 data에 totalUse 필드가 없다면 그냥 화면 표시용으로만 써도 됨.
+    } catch (error) {
+      console.error("일수 계산 실패:", error);
+      setCalculatedDays(0);
+    }
+  }, [data.startDate, data.endDate, data.vacationType]);
+
+  // =================================================================
+  // 3. 🔥 [핵심 로직] 데이터 변경 감지 & 반차 자동 제어
+  // =================================================================
+  useEffect(() => {
+    // 1) 계산 API 호출 (0.3초 딜레이)
+    const timer = setTimeout(() => {
+        fetchCalculatedDays();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [data.startDate, data.endDate, data.vacationType, fetchCalculatedDays]);
+
+  // =================================================================
+  // 4. 핸들러 래퍼 (반차 로직 처리를 위해 감쌈)
+  // =================================================================
+  
+  // 휴가 종류 변경 시
+  const handleTypeChange = (e) => {
+    const newType = e.target.value;
+    onChange(e); // 부모 상태 업데이트
+
+    // 반차 계열이면 종료일을 시작일과 강제로 맞춤
+    if (newType.includes('반차') && data.startDate) {
+        // 강제로 endDate 변경 이벤트 발생시킴
+        onChange({ target: { name: 'endDate', value: data.startDate } });
+    }
+  };
+
+  // 시작일 변경 시
+  const handleStartDateChange = (e) => {
+    const newStart = e.target.value;
+    onChange(e); // 부모 상태 업데이트
+
+    // 반차 계열이면 종료일도 같이 변경
+    if (data.vacationType && data.vacationType.includes('반차')) {
+        onChange({ target: { name: 'endDate', value: newStart } });
+    }
+  };
+
 
   return (
     <div className="p-4 bg-white" style={{ fontFamily: '"맑은 고딕", "Malgun Gothic", sans-serif' }}>
@@ -41,7 +116,6 @@ export default function VacationForm({ data, onChange, approvalLines = [], login
                 <tbody>
                   <tr>
                     <td style={{ background: "#ddd", padding: "5px", border: "1px solid black", fontWeight: "bold", textAlign: "center" }}>기 안 일</td>
-                    {/* 🔥 기안일 수정 */}
                     <td style={{ padding: "5px", border: "1px solid black" }}>{writeDate}</td>
                   </tr>
                   <tr>
@@ -54,7 +128,6 @@ export default function VacationForm({ data, onChange, approvalLines = [], login
                   </tr>
                   <tr>
                     <td style={{ background: "#ddd", padding: "5px", border: "1px solid black", fontWeight: "bold", textAlign: "center" }}>문서번호</td>
-                    {/* 🔥 문서번호 수정 */}
                     <td style={{ padding: "5px", border: "1px solid black" }}>{data.docNo || '자동채번'}</td>
                   </tr>
                 </tbody>
@@ -116,13 +189,13 @@ export default function VacationForm({ data, onChange, approvalLines = [], login
             <td style={{ background: "#ddd", padding: "5px", border: "1px solid black", fontWeight: "bold", textAlign: "center" }}>제 목</td>
             <td style={{ padding: "5px", border: "1px solid black" }}>
               <input 
-                 type="text" 
-                 name="approvalTitle" 
-                 value={data.approvalTitle || ''} 
-                 onChange={onChange} 
-                 disabled={readOnly} // 🔥 readOnly 적용
-                 style={{ width: "100%", border: "none", outline: "none", fontWeight: "bold" }} 
-                 placeholder="제목을 입력하세요 (예: 연차 신청)" 
+                  type="text" 
+                  name="approvalTitle" 
+                  value={data.approvalTitle || ''} 
+                  onChange={onChange} 
+                  disabled={readOnly} 
+                  style={{ width: "100%", border: "none", outline: "none", fontWeight: "bold" }} 
+                  placeholder="제목을 입력하세요 (예: 연차 신청)" 
               />
             </td>
           </tr>
@@ -131,11 +204,12 @@ export default function VacationForm({ data, onChange, approvalLines = [], login
             <td style={{ background: "#ddd", padding: "5px", border: "1px solid black", fontWeight: "bold", textAlign: "center" }}>휴가 종류</td>
             <td style={{ padding: "5px", border: "1px solid black" }}>
               <select 
-                 name="vacationType" 
-                 value={data.vacationType} 
-                 onChange={onChange} 
-                 disabled={readOnly} // 🔥 readOnly 적용
-                 style={{ width: "100%", padding: "5px", border: "1px solid #ccc", borderRadius: "4px" }}
+                  name="vacationType" 
+                  value={data.vacationType || '연차'} 
+                  // 🔥 핸들러 교체 (반차 처리용)
+                  onChange={handleTypeChange} 
+                  disabled={readOnly} 
+                  style={{ width: "100%", padding: "5px", border: "1px solid #ccc", borderRadius: "4px" }}
               >
                 <option value="연차">연차</option>
                 <option value="오전반차">오전반차</option>
@@ -151,23 +225,52 @@ export default function VacationForm({ data, onChange, approvalLines = [], login
             <td style={{ background: "#ddd", padding: "5px", border: "1px solid black", fontWeight: "bold", textAlign: "center" }}>기 간</td>
             <td style={{ padding: "5px", border: "1px solid black" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <input type="date" name="startDate" value={data.startDate || ''} onChange={onChange} disabled={readOnly} style={{ padding: "3px", border: "1px solid #ccc" }} />
+                {/* 시작일 */}
+                <input 
+                    type="date" 
+                    name="startDate" 
+                    value={data.startDate || ''} 
+                    // 🔥 핸들러 교체 (반차 처리용)
+                    onChange={handleStartDateChange} 
+                    disabled={readOnly} 
+                    style={{ padding: "3px", border: "1px solid #ccc" }} 
+                />
                 <span>~</span>
-                <input type="date" name="endDate" value={data.endDate || ''} onChange={onChange} disabled={readOnly} style={{ padding: "3px", border: "1px solid #ccc" }} />
+                {/* 종료일 */}
+                <input 
+                    type="date" 
+                    name="endDate" 
+                    value={data.endDate || ''} 
+                    onChange={onChange} 
+                    // 🔥 반차면 비활성화 (readOnly + 배경색)
+                    disabled={readOnly || (data.vacationType && data.vacationType.includes('반차'))}
+                    style={{ 
+                        padding: "3px", 
+                        border: "1px solid #ccc",
+                        backgroundColor: (data.vacationType && data.vacationType.includes('반차')) ? '#f3f3f3' : 'white'
+                    }} 
+                />
+                
+                {/* 🔥 계산된 일수 표시 */}
+                {calculatedDays > 0 && (
+                  <span style={{ marginLeft: "10px", fontSize: "14px", color: "blue", fontWeight: "bold" }}>
+                    (총 {calculatedDays}일)
+                  </span>
+                )}
               </div>
             </td>
           </tr>
 
           <tr>
             <td style={{ background: "#ddd", padding: "5px", border: "1px solid black", fontWeight: "bold", textAlign: "center" }}>신청 사유</td>
-            <td style={{ padding: "10px", border: "1px solid black", height: "600px", verticalAlign: "top" }}>
+            <td style={{ padding: "10px", border: "1px solid black", height: "300px", verticalAlign: "top" }}>
               <textarea 
-                 name="approvalContent" 
-                 value={data.approvalContent || ''} 
-                 onChange={onChange} 
-                 disabled={readOnly} // 🔥 readOnly 적용
-                 style={{ width: "100%", height: "100%", border: "none", outline: "none", resize: "none" }} 
-                 placeholder="휴가 사유를 입력하세요." 
+                  name="approvalContent" 
+                  value={data.approvalContent || ''} 
+                  onChange={onChange} 
+                  disabled={readOnly} 
+                  style={{ width: "100%", height: "100%", border: "none", outline: "none", resize: "none" }} 
+                  placeholder="휴가 사유를 입력하세요." 
               />
             </td>
           </tr>
@@ -180,9 +283,7 @@ export default function VacationForm({ data, onChange, approvalLines = [], login
           <tr>
             <td style={{ padding: "15px", fontSize: "12px", color: "#555" }}>
               <strong>※ 해당 증빙을 첨부하세요.</strong><br/><br/>
-              - 종류 : 연차, 반차, 보건, 경조, 교육, 훈련, 외출, 조퇴, 기타<br/>
-              - 시간 : 연차/보건/경조 =&gt; "전일"<br/>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;반차 =&gt; "오전", "오후"<br/>
+              - 종류 : 연차, 오전반차, 오후반차, 병가, 경조사, 기타<br/>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;교육/훈련/외출/조퇴 =&gt; 구체적 시간 기재
             </td>
           </tr>

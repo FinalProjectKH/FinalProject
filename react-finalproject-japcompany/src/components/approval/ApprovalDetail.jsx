@@ -31,13 +31,13 @@ export default function ApprovalDetail() {
       .catch(err => console.error(err));
   }, []);
 
-  // 2. 데이터 로드 (🔥 수정된 부분)
+  // 2. 데이터 로드 (🔥 Map 구조 대응 수정)
   useEffect(() => {
     // 1) 문서번호가 없거나, 아직 내 사번(myEmpNo)을 못 가져왔으면 요청하지 않고 대기
     if (!docNo || !myEmpNo) return; 
 
     // 2) URL 뒤에 ?empNo=${myEmpNo} 추가
-    fetch(`/api/approval/detail/${docNo}?empNo=${myEmpNo}`)
+    fetch(`/api/approval/view/${docNo}?empNo=${myEmpNo}`) // 🔥 /view로 변경 (권한체크용)
       .then(res => {
         // 400, 403 에러 처리
         if (res.status === 403) {
@@ -50,18 +50,23 @@ export default function ApprovalDetail() {
         return res.json();
       })
       .then(result => {
-        setData(result);
+        // 🔥 [핵심] 백엔드에서 Map으로 보냈으므로, 여기서도 구조에 맞게 받아야 함
+        // result = { approval: {...}, lines: [...], vacation: {...}, ... }
+        console.log("백엔드 응답 데이터:", result);
+        setData(result); 
         setLoading(false);
       })
       .catch(err => {
         alert(err.message);
         navigate('/approval');
       });
-  }, [docNo, myEmpNo, navigate]); // 🔥 myEmpNo가 로드되면 이 useEffect가 다시 실행됨
+  }, [docNo, myEmpNo, navigate]); 
 
-  // (1) 폼 데이터 가공
+  // (1) 폼 데이터 가공 (🔥 방어 코드 추가)
   const formData = useMemo(() => {
-    if (!data) return null;
+    // data가 없거나 approval 정보가 아직 없으면 null 리턴 (에러 방지)
+    if (!data || !data.approval) return null;
+
     const { approval, lines, vacation, expense, expenseDetails } = data;
     
     return {
@@ -69,13 +74,14 @@ export default function ApprovalDetail() {
         approvalTitle: approval.approvalTitle,
         approvalContent: approval.approvalContent,
         approvalDate: approval.approvalDate,
-        approvalLineList: lines.map(line => ({
+        approvalLineList: lines ? lines.map(line => ({
             approverNo: line.approverNo,
             name: line.empName,
-            rank: line.deptName,
+            rank: line.deptName, // 직급 정보가 deptName에 들어오는 경우
+            jobName: line.jobName, // 직급이 jobName에 있다면 이거 사용
             appLineStatus: line.appLineStatus,
             appLineOrder: line.appLineOrder
-        })),
+        })) : [],
         vacationType: vacation?.vacationType || '',
         startDate: vacation?.startDate || '',
         endDate: vacation?.endDate || '',
@@ -86,9 +92,9 @@ export default function ApprovalDetail() {
     };
   }, [data]);
 
-  // (2) 내 차례 판별 로직
+  // (2) 내 차례 판별 로직 (🔥 방어 코드 추가)
   const isMyTurn = useMemo(() => {
-      if (!data || !myEmpNo) return false;
+      if (!data || !myEmpNo || !data.lines) return false;
       const { lines } = data;
 
       const myLine = lines.find(line => String(line.approverNo) === String(myEmpNo));
@@ -101,28 +107,37 @@ export default function ApprovalDetail() {
       return !hasPreviousWaiter;
   }, [data, myEmpNo]);
 
-  // (3) 회수 가능 여부
+  // (3) 회수 가능 여부 (🔥 방어 코드 추가)
   const canRetract = useMemo(() => {
-      if (!data || !myEmpNo) return false;
+      if (!data || !myEmpNo || !data.approval || !data.lines) return false;
       const { approval, lines } = data;
       
-      return approval.empNo === myEmpNo && 
+      return String(approval.empNo) === String(myEmpNo) && 
              approval.approvalStatus === 'W' && 
              approval.tempSaveYn === 'N' &&
              lines.length > 0 &&
              lines[0].appLineStatus === 'W';
   }, [data, myEmpNo]);
 
-  // (4) 임시저장 여부
+  // (4) 임시저장 여부 (🔥 방어 코드 추가)
   const isMyTemp = useMemo(() => {
-      if (!data || !myEmpNo) return false;
-      return data.approval.empNo === myEmpNo && data.approval.tempSaveYn === 'Y';
+      if (!data || !myEmpNo || !data.approval) return false;
+      return String(data.approval.empNo) === String(myEmpNo) && data.approval.tempSaveYn === 'Y';
   }, [data, myEmpNo]);
 
 
-  // 로딩 중 체크
-  if (loading || !data) return <div className="text-center py-20">로딩중...</div>;
-  const { approval } = data;
+  // 🔥 [핵심] 로딩 중이거나 데이터가 아직 없을 때 화면 렌더링 방어
+  if (loading || !data || !data.approval) {
+      return (
+        <div className="flex justify-center items-center h-screen bg-gray-100">
+            <div className="text-xl font-bold text-gray-500 animate-pulse">
+                문서 정보를 불러오는 중입니다...
+            </div>
+        </div>
+      );
+  }
+
+  const { approval } = data; // 이제 안전하게 꺼낼 수 있음
 
   // ---------------- 핸들러 함수들 ----------------
 
@@ -179,7 +194,7 @@ export default function ApprovalDetail() {
     let formId = 'general';
     if (data.vacation) formId = 'vacation';
     if (data.expense) formId = 'expense';
-    navigate(`/approval/write/${formId}`, { state: { docNo: docNo } });
+    navigate(`/approval/write/${formId}?docNo=${docNo}`); // URL 파라미터 방식으로 통일
   };
 
   const handleDelete = async () => {
@@ -222,12 +237,13 @@ export default function ApprovalDetail() {
   };
 
   const handleFileDownload = (fileName) => {
-    // 다운로드 보안 처리를 위해 URL 변경이 필요하면 여기서 수정
     const fileUrl = `/uploads/approval/${fileName}`;
     window.open(fileUrl, '_blank');
   };
 
   const renderForm = () => {
+    if (!formData) return null; // 방어 코드
+
     const commonProps = {
       data: formData,
       onChange: () => {}, 
@@ -298,11 +314,11 @@ export default function ApprovalDetail() {
               </h3>
               <div className="text-sm text-red-700 mb-3">
                 결재자 <span className="font-bold underline">
-                    {data.lines.find(line => line.appLineStatus === 'R')?.empName}
+                    {data.lines ? data.lines.find(line => line.appLineStatus === 'R')?.empName : '알 수 없음'}
                 </span> 님의 의견:
               </div>
               <div className="bg-white border border-red-200 rounded p-4 text-gray-800 text-sm leading-relaxed whitespace-pre-wrap shadow-inner">
-                {data.lines.find(line => line.appLineStatus === 'R')?.rejectReason || "사유가 입력되지 않았습니다."}
+                {data.lines ? data.lines.find(line => line.appLineStatus === 'R')?.rejectReason : "사유가 입력되지 않았습니다."}
               </div>
             </div>
           </div>
