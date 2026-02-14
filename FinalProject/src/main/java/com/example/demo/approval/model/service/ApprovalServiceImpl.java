@@ -23,6 +23,7 @@ import com.example.demo.approval.model.dto.TotalVacationDto;
 import com.example.demo.approval.model.mapper.ApprovalMapper;
 import com.example.demo.calendar.model.dto.CalendarDto;
 import com.example.demo.calendar.model.service.CalendarService;
+import com.example.demo.common.utility.Pagination;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -141,28 +142,28 @@ public class ApprovalServiceImpl implements ApprovalService {
     // 2. 각종 조회 메서드
     // --------------------------------------------------------------------------------
 	@Override
-	public List<ApprovalDto> selectWaitList(int empNo) {
-		return mapper.selectWaitList(empNo);
+	public List<ApprovalDto> selectWaitList(String empNo, Pagination pagination) {
+		return mapper.selectWaitList(empNo, pagination);
 	}
 
 	@Override
-	public List<ApprovalDto> selectUpcomingList(int empNo) {
-		return mapper.selectUpcomingList(empNo);
+	public List<ApprovalDto> selectUpcomingList(String empNo, Pagination pagination) {
+		return mapper.selectUpcomingList(empNo, pagination);
 	}
 
 	@Override
-	public List<ApprovalDto> selectMyDraftList(int empNo) {
-		return mapper.selectMyDraftList(empNo);
+	public List<ApprovalDto> selectMyDraftList(String empNo, Pagination pagination) {
+		return mapper.selectMyDraftList(empNo, pagination);
 	}
 
 	@Override
-	public List<ApprovalDto> selectTempList(int empNo) {
-		return mapper.selectTempList(empNo);
+	public List<ApprovalDto> selectTempList(String empNo, Pagination pagination) {
+		return mapper.selectTempList(empNo, pagination);
 	}
 
 	@Override
-	public List<ApprovalDto> selectMyApprovedList(int empNo) {
-		return mapper.selectMyApprovedList(empNo);
+	public List<ApprovalDto> selectMyApprovedList(String empNo, Pagination pagination) {
+		return mapper.selectMyApprovedList(empNo, pagination);
 	}
 
     // --------------------------------------------------------------------------------
@@ -442,5 +443,38 @@ public class ApprovalServiceImpl implements ApprovalService {
         }
         return successCount; 
     }
+
+
+    // 갯수 새기
+
+	@Override
+	public int getWaitListCount(String empNo) {
+		// TODO Auto-generated method stub
+		return mapper.getWaitListCount(empNo);
+	}
+
+	@Override
+	public int getUpcomingListCount(String empNo) {
+		// TODO Auto-generated method stub
+		return mapper.getUpcomingListCount(empNo);
+	}
+
+	@Override
+	public int getMyDraftListCount(String empNo) {
+		// TODO Auto-generated method stub
+		return mapper.getMyDraftListCount(empNo);
+	}
+
+	@Override
+	public int getTempListCount(String empNo) {
+		// TODO Auto-generated method stub
+		return mapper.getTempListCount(empNo);
+	}
+
+	@Override
+	public int getMyApprovedListCount(String empNo) {
+		// TODO Auto-generated method stub
+		return mapper.getMyApprovedListCount(empNo);
+	}
 
 }

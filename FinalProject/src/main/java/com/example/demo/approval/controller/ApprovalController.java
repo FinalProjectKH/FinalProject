@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.approval.model.dto.ApprovalDto;
 import com.example.demo.approval.model.service.ApprovalService;
+import com.example.demo.common.utility.Pagination;
 import com.example.demo.employee.model.dto.LoginMemberDTO;
 
 import jakarta.servlet.http.HttpSession;
@@ -71,61 +72,112 @@ public class ApprovalController {
 	
 	// 1. 결재 대기 문서 (내 차례인 문서)
     @GetMapping("/wait")
-    public ResponseEntity<?> getWaitList(@RequestParam("empNo") int empNo) {
+    public ResponseEntity<Map<String, Object>> getWaitList(
+            @RequestParam("empNo") String empNo,
+            @RequestParam(value="page", defaultValue="1") int currentPage // 🔥 페이지 번호 추가
+    ) {
+        Map<String, Object> map = new HashMap<>();
         try {
-            List<ApprovalDto> list = service.selectWaitList(empNo);
-            return ResponseEntity.ok(list);
+            // 1) 전체 갯수 구하기
+            int listCount = service.getWaitListCount(empNo);
+            
+            // 2) Pagination 객체 생성 (10개씩 보기, 하단 버튼 5개)
+            Pagination pagination = new Pagination(currentPage, listCount, 10, 5);
+            
+            // 3) 페이징된 리스트 조회
+            List<ApprovalDto> list = service.selectWaitList(empNo, pagination);
+            
+            map.put("list", list);
+            map.put("pagination", pagination); // 프론트에서 버튼 그릴 때 필요
+            
+            return ResponseEntity.ok(map);
         } catch (Exception e) {
             log.error("결재 대기 목록 조회 실패", e);
-            return ResponseEntity.status(500).body("목록 조회 실패");
+            return ResponseEntity.status(500).body(null);
         }
     }
 
     // 2. 결재 예정 문서 (내 차례는 아직 안 옴)
     @GetMapping("/upcoming")
-    public ResponseEntity<?> getUpcomingList(@RequestParam("empNo") int empNo) {
+    public ResponseEntity<Map<String, Object>> getUpcomingList(
+            @RequestParam("empNo") String empNo,
+            @RequestParam(value="page", defaultValue="1") int currentPage
+    ) {
+        Map<String, Object> map = new HashMap<>();
         try {
-            List<ApprovalDto> list = service.selectUpcomingList(empNo);
-            return ResponseEntity.ok(list);
+            int listCount = service.getUpcomingListCount(empNo);
+            Pagination pagination = new Pagination(currentPage, listCount, 10, 5);
+            List<ApprovalDto> list = service.selectUpcomingList(empNo, pagination);
+            
+            map.put("list", list);
+            map.put("pagination", pagination);
+            return ResponseEntity.ok(map);
         } catch (Exception e) {
             log.error("결재 예정 목록 조회 실패", e);
-            return ResponseEntity.status(500).body("목록 조회 실패");
+            return ResponseEntity.status(500).body(null);
         }
     }
 
     // 3. 기안 문서함 (내가 작성한 문서 - 완료된 것만)
     @GetMapping("/draft")
-    public ResponseEntity<?> getMyDraftList(@RequestParam("empNo") int empNo) {
+    public ResponseEntity<Map<String, Object>> getMyDraftList(
+            @RequestParam("empNo") String empNo,
+            @RequestParam(value="page", defaultValue="1") int currentPage
+    ) {
+        Map<String, Object> map = new HashMap<>();
         try {
-            List<ApprovalDto> list = service.selectMyDraftList(empNo);
-            return ResponseEntity.ok(list);
+            int listCount = service.getMyDraftListCount(empNo);
+            Pagination pagination = new Pagination(currentPage, listCount, 10, 5);
+            List<ApprovalDto> list = service.selectMyDraftList(empNo, pagination);
+            
+            map.put("list", list);
+            map.put("pagination", pagination);
+            return ResponseEntity.ok(map);
         } catch (Exception e) {
             log.error("기안 문서함 조회 실패", e);
-            return ResponseEntity.status(500).body("목록 조회 실패");
+            return ResponseEntity.status(500).body(null);
         }
     }
 
     // 4. 임시 저장함 (작성 중인 문서)
     @GetMapping("/temp")
-    public ResponseEntity<?> getTempList(@RequestParam("empNo") int empNo) {
+    public ResponseEntity<Map<String, Object>> getTempList(
+            @RequestParam("empNo") String empNo,
+            @RequestParam(value="page", defaultValue="1") int currentPage
+    ) {
+        Map<String, Object> map = new HashMap<>();
         try {
-            List<ApprovalDto> list = service.selectTempList(empNo);
-            return ResponseEntity.ok(list);
+            int listCount = service.getTempListCount(empNo);
+            Pagination pagination = new Pagination(currentPage, listCount, 10, 5);
+            List<ApprovalDto> list = service.selectTempList(empNo, pagination);
+            
+            map.put("list", list);
+            map.put("pagination", pagination);
+            return ResponseEntity.ok(map);
         } catch (Exception e) {
             log.error("임시 저장함 조회 실패", e);
-            return ResponseEntity.status(500).body("목록 조회 실패");
+            return ResponseEntity.status(500).body(null);
         }
     }
 
     // 5. 결재 문서함 (내가 승인/반려 처리한 문서)
     @GetMapping("/approved")
-    public ResponseEntity<?> getMyApprovedList(@RequestParam("empNo") int empNo) {
+    public ResponseEntity<Map<String, Object>> getMyApprovedList(
+            @RequestParam("empNo") String empNo,
+            @RequestParam(value="page", defaultValue="1") int currentPage
+    ) {
+        Map<String, Object> map = new HashMap<>();
         try {
-            List<ApprovalDto> list = service.selectMyApprovedList(empNo);
-            return ResponseEntity.ok(list);
+            int listCount = service.getMyApprovedListCount(empNo);
+            Pagination pagination = new Pagination(currentPage, listCount, 10, 5);
+            List<ApprovalDto> list = service.selectMyApprovedList(empNo, pagination);
+            
+            map.put("list", list);
+            map.put("pagination", pagination);
+            return ResponseEntity.ok(map);
         } catch (Exception e) {
             log.error("결재 문서함 조회 실패", e);
-            return ResponseEntity.status(500).body("목록 조회 실패");
+            return ResponseEntity.status(500).body(null);
         }
     }
     

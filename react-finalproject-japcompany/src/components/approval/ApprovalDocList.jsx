@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import Pagination from '../common/Pagination'; 
 
 export default function ApprovalDocList() {
   const location = useLocation();
@@ -9,18 +10,18 @@ export default function ApprovalDocList() {
   const [loading, setLoading] = useState(false);
   const [empNo, setEmpNo] = useState(null);
 
+  // 페이징 관련 상태
+  const [page, setPage] = useState(1);       // 현재 페이지
+  const [pagination, setPagination] = useState(null); // 페이징 메타데이터
+
   // 1. 현재 페이지 상태 체크
-  const isApproveBox = location.pathname.includes('/approve'); // 결재 완료함인가?
-  const isDraftOrTemp = location.pathname.includes('draft') || location.pathname.includes('temp'); // 임시/기안함인가?
+  const isApproveBox = location.pathname.includes('/approve'); 
+  const isDraftOrTemp = location.pathname.includes('draft') || location.pathname.includes('temp'); 
 
-  // 2. 🔥 [핵심 수정] 동적 컬럼 개수 계산
-  // 기본: 문서번호, 제목, 기안일, 상태 (4개)
-  // + 결재완료함이면: 결재일 추가 (+1)
-  // + 임시/기안함이 아니면: 기안자 추가 (+1)
-  let colCount = 4;
-  if (isApproveBox) colCount += 1;
-  if (!isDraftOrTemp) colCount += 1;
-
+  // 2. 동적 컬럼 개수 계산
+  let colCount = 4; // 기본: 번호, 제목, 기안일, 상태
+  if (isApproveBox) colCount += 1; // 결재일
+  if (!isDraftOrTemp) colCount += 1; // 기안자
 
   // API 엔드포인트 결정
   const getApiEndpoint = (path) => {
@@ -42,6 +43,11 @@ export default function ApprovalDocList() {
       .catch(err => console.error(err));
   }, []);
 
+  //  메뉴(탭)가 바뀌면 페이지를 1로 리셋
+  useEffect(() => {
+    setPage(1);
+  }, [location.pathname]);
+
   // 데이터 조회
   useEffect(() => {
     if (!empNo) return;
@@ -49,13 +55,21 @@ export default function ApprovalDocList() {
     setLoading(true);
     const apiType = getApiEndpoint(location.pathname);
 
-    fetch(`/api/approval/${apiType}?empNo=${empNo}`)
+    //  page 파라미터 추가
+    fetch(`/api/approval/${apiType}?empNo=${empNo}&page=${page}`)
       .then(res => {
         if (!res.ok) throw new Error('조회 실패');
         return res.json();
       })
       .then(data => {
-        setDocList(data);
+        //  백엔드 응답 구조 변경 대응 (Map -> list, pagination)
+        if (data) {
+            setDocList(data.list || []); 
+            setPagination(data.pagination || null);
+        } else {
+            setDocList([]);
+            setPagination(null);
+        }
         setLoading(false);
       })
       .catch(err => {
@@ -63,7 +77,7 @@ export default function ApprovalDocList() {
         setDocList([]);
         setLoading(false);
       });
-  }, [location.pathname, empNo]); 
+  }, [location.pathname, empNo, page]); // 🔥 page가 바뀔 때마다 재실행
 
   // 뱃지 스타일
   const getStatusBadge = (status) => {
@@ -92,81 +106,88 @@ export default function ApprovalDocList() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden min-h-[500px]">
-      {/* table-fixed 클래스로 너비 고정 */}
-      <table className="w-full text-sm text-left text-gray-500 table-fixed">
-        <thead className="bg-gray-50 text-gray-700 uppercase border-b">
-          <tr>
-            <th className="px-4 py-3 w-28 text-center">문서번호</th>
-            <th className="px-6 py-3 w-auto text-center whitespace-nowrap">제목</th>
-            <th className="px-6 py-3 w-32 text-center whitespace-nowrap">기안일</th>
-            
-            {isApproveBox && (
-              <th className="px-6 py-3 w-32 text-center text-blue-600 font-bold whitespace-nowrap">
-                결재일
-              </th>
-            )}
-
-            {!isDraftOrTemp && (
-               <th className="px-6 py-3 w-24 text-center whitespace-nowrap">기안자</th>
-            )}
-            <th className="px-6 py-3 w-24 text-center whitespace-nowrap">상태</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
+    <div className="flex flex-col gap-4"> {/* 페이지네이션 간격용 flex 컨테이너 */}
+        
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden min-h-[500px]">
+        <table className="w-full text-sm text-left text-gray-500 table-fixed">
+            <thead className="bg-gray-50 text-gray-700 uppercase border-b">
             <tr>
-              {/* 🔥 동적으로 계산한 colCount 적용 */}
-              <td colSpan={colCount} className="text-center py-20">데이터를 불러오는 중...</td>
-            </tr>
-          ) : docList.length === 0 ? (
-            <tr>
-              {/* 🔥 동적으로 계산한 colCount 적용 */}
-              <td colSpan={colCount} className="text-center py-20">문서가 없습니다.</td>
-            </tr>
-          ) : (
-            docList.map((doc) => (
-              <tr 
-                key={doc.docNo} 
-                onClick={() => navigate(`/approval/detail/${doc.docNo}`)}
-                className="bg-white border-b hover:bg-gray-50 cursor-pointer transition-colors"
-              >
-                <td className="px-4 py-3 font-mono text-center text-xs">
-                    {renderDocNo(doc.docNo)}
-                </td>
+                <th className="px-4 py-3 w-28 text-center">문서번호</th>
+                <th className="px-6 py-3 w-auto text-center whitespace-nowrap">제목</th>
+                <th className="px-6 py-3 w-32 text-center whitespace-nowrap">기안일</th>
                 
-                {/* 제목은 w-auto이므로 남은 공간을 모두 차지함 */}
-                <td className="px-6 py-4 font-medium text-gray-900 truncate">
-                  <div className="flex items-center">
-                    <span className="truncate block" title={doc.approvalTitle}>
-                      {doc.approvalTitle}
-                    </span>
-                    {doc.tempSaveYn === 'Y' && (
-                      <span className="text-red-500 text-xs ml-2 font-bold whitespace-nowrap shrink-0">
-                        [임시]
-                      </span>
-                    )}
-                  </div>
-                </td>
-                
-                <td className="px-6 py-4 text-center whitespace-nowrap">{doc.approvalDate || '-'}</td>
-
                 {isApproveBox && (
-                  <td className="px-6 py-4 text-center text-blue-600 font-bold whitespace-nowrap">
-                      {doc.appLineDate || '-'}
-                  </td>
+                <th className="px-6 py-3 w-32 text-center text-blue-600 font-bold whitespace-nowrap">
+                    결재일
+                </th>
                 )}
-                
+
                 {!isDraftOrTemp && (
-                    <td className="px-6 py-4 text-center whitespace-nowrap truncate">{doc.empName || '나'}</td>
+                <th className="px-6 py-3 w-24 text-center whitespace-nowrap">기안자</th>
                 )}
-                
-                <td className="px-6 py-4 text-center whitespace-nowrap">{getStatusBadge(doc.approvalStatus)}</td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+                <th className="px-6 py-3 w-24 text-center whitespace-nowrap">상태</th>
+            </tr>
+            </thead>
+            <tbody>
+            {loading ? (
+                <tr>
+                <td colSpan={colCount} className="text-center py-20">데이터를 불러오는 중...</td>
+                </tr>
+            ) : docList.length === 0 ? (
+                <tr>
+                <td colSpan={colCount} className="text-center py-20">문서가 없습니다.</td>
+                </tr>
+            ) : (
+                docList.map((doc) => (
+                <tr 
+                    key={doc.docNo} 
+                    onClick={() => navigate(`/approval/detail/${doc.docNo}`)}
+                    className="bg-white border-b hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                    <td className="px-4 py-3 font-mono text-center text-xs">
+                        {renderDocNo(doc.docNo)}
+                    </td>
+                    
+                    <td className="px-6 py-4 font-medium text-gray-900 truncate">
+                    <div className="flex items-center">
+                        <span className="truncate block" title={doc.approvalTitle}>
+                        {doc.approvalTitle}
+                        </span>
+                        {doc.tempSaveYn === 'Y' && (
+                        <span className="text-red-500 text-xs ml-2 font-bold whitespace-nowrap shrink-0">
+                            [임시]
+                        </span>
+                        )}
+                    </div>
+                    </td>
+                    
+                    <td className="px-6 py-4 text-center whitespace-nowrap">{doc.approvalDate || '-'}</td>
+
+                    {isApproveBox && (
+                    <td className="px-6 py-4 text-center text-blue-600 font-bold whitespace-nowrap">
+                        {doc.appLineDate || '-'}
+                    </td>
+                    )}
+                    
+                    {!isDraftOrTemp && (
+                        <td className="px-6 py-4 text-center whitespace-nowrap truncate">{doc.empName || '나'}</td>
+                    )}
+                    
+                    <td className="px-6 py-4 text-center whitespace-nowrap">{getStatusBadge(doc.approvalStatus)}</td>
+                </tr>
+                ))
+            )}
+            </tbody>
+        </table>
+        </div>
+
+        {/*  페이지네이션 컴포넌트 렌더링 */}
+        {!loading && docList.length > 0 && pagination && (
+            <Pagination 
+                pagination={pagination} 
+                setPage={setPage} 
+            />
+        )}
     </div>
   );
 }

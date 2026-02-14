@@ -6,6 +6,7 @@ import java.util.Map;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.approval.model.dto.ApprovalDto;
+import com.example.demo.common.utility.Pagination;
 
 public interface ApprovalService {
 
@@ -13,11 +14,11 @@ public interface ApprovalService {
 	int insertApproval(ApprovalDto dto, List<MultipartFile> files) throws Exception;
 
 	// 목록 조회
-	List<ApprovalDto> selectWaitList(int empNo);
-	List<ApprovalDto> selectUpcomingList(int empNo);
-	List<ApprovalDto> selectMyDraftList(int empNo);
-	List<ApprovalDto> selectTempList(int empNo);
-	List<ApprovalDto> selectMyApprovedList(int empNo);
+	List<ApprovalDto> selectWaitList(String empNo, Pagination pagination);
+	List<ApprovalDto> selectUpcomingList(String empNo, Pagination pagination);
+	List<ApprovalDto> selectMyDraftList(String empNo, Pagination pagination);
+	List<ApprovalDto> selectTempList(String empNo, Pagination pagination);
+	List<ApprovalDto> selectMyApprovedList(String empNo, Pagination pagination);
 
 	// 상세 조회 (단순)
 	ApprovalDto selectApprovalDetail(String docNo);
@@ -39,4 +40,15 @@ public interface ApprovalService {
 
 	// 삭제
 	void deleteApproval(String docNo);
+
+	int getWaitListCount(String empNo);
+
+	int getUpcomingListCount(String empNo);
+
+	int getMyDraftListCount(String empNo);
+
+	int getTempListCount(String empNo);
+
+	int getMyApprovedListCount(String empNo);
+
 }
