@@ -75,7 +75,7 @@ export default function ApprovalHome() {
         >
             <div className="flex justify-between items-start">
                 <div>
-                    <p className="text-gray-500 text-sm font-bold mb-1">결재 대기 문서</p>
+                    <p className="text-gray-500 text-sm font-bold mb-1">결재 대기(예정) 문서</p>
                     <h3 className="text-4xl font-extrabold text-gray-800 group-hover:text-blue-600 transition-colors">
                         {data.waitCount} <span className="text-lg font-normal text-gray-400">건</span>
                     </h3>
@@ -140,7 +140,7 @@ export default function ApprovalHome() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                    <FaExclamationCircle className="text-yellow-500"/> 결재 대기 (최신)
+                    <FaExclamationCircle className="text-yellow-500"/> 결재 대기/예정 (최신)
                 </h3>
                 <span onClick={() => navigate('/approval/wait')} className="text-xs text-gray-500 cursor-pointer hover:text-blue-600 font-bold">더보기 +</span>
             </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom'; 
+// 🔥 useSearchParams 추가!
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'; 
 import { FaTimes, FaSave, FaPaperPlane, FaPaperclip, FaExclamationTriangle, FaTrash } from 'react-icons/fa';
 
 import ApprovalLineModal from './ApprovalLineModal';
@@ -10,22 +11,22 @@ import ExpenseForm from './forms/ExpenseForm';
 export default function ApprovalWrite() {
   const { formId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation(); 
-  
-  // 수정 모드일 경우 전달받은 docNo (없으면 undefined)
-  const editDocNo = location.state?.docNo;
+  const location = useLocation();
+  const [searchParams] = useSearchParams(); // 🔥 주소창 파라미터 읽기 기능
+
+  // 🔥 [핵심 수정] state에도 없고, 주소창(searchParams)에도 없으면 undefined
+  const editDocNo = location.state?.docNo || searchParams.get('docNo');
 
   // 상태 관리
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showLineModal, setShowLineModal] = useState(false);
   const [loginMember, setLoginMember] = useState(null);
 
-  // 파일 관리 상태 & Ref
   const [selectedFiles, setSelectedFiles] = useState([]); 
   const fileInputRef = useRef(null); 
 
-  // 폼 데이터 초기값
   const initialFormData = {
+    docNo: '', 
     approvalTitle: '', 
     approvalContent: '',
     approvalLineList: [],
@@ -40,10 +41,7 @@ export default function ApprovalWrite() {
 
   // 1. 내 정보 가져오기
   useEffect(() => {
-    fetch("/employee/myInfo", { 
-        method: "GET",
-        credentials: "include", 
-    })
+    fetch("/employee/myInfo", { method: "GET" })
     .then(res => {
         if(res.status === 401) {
             alert("로그인 세션이 만료되었습니다.");
@@ -56,7 +54,7 @@ export default function ApprovalWrite() {
     .catch(err => console.error(err));
   }, []);
 
-  // 2. 탭 변경 시 초기화 (수정 모드가 아닐 때만)
+  // 2. 초기화 (신규 작성일 때만)
   useEffect(() => {
     if (!editDocNo) {
         setFormData(initialFormData);
@@ -65,43 +63,54 @@ export default function ApprovalWrite() {
   }, [formId, editDocNo]);
 
 
-  // 3. 수정 모드일 때 기존 데이터 불러오기
+  // 3. 🔥 [데이터 로드] 수정 모드일 때
   useEffect(() => {
-    if (editDocNo) {
-      fetch(`/api/approval/detail/${editDocNo}`)
+    if (editDocNo && loginMember?.empNo) {
+      console.log("데이터 로드 시작: ", editDocNo);
+
+      fetch(`/api/approval/view/${editDocNo}?empNo=${loginMember.empNo}`)
         .then(res => {
             if (!res.ok) throw new Error("데이터 로드 실패");
             return res.json();
         })
-        .then(data => {
+        .then(result => {
+            console.log("백엔드 응답:", result);
+            
+            // 🔥 Map 구조 해체 (JSON 구조에 맞춤)
+            const { approval, lines, vacation, expense, expenseDetails } = result;
+
+            if (!approval) return;
+
             setFormData({
-                approvalTitle: data.approval.approvalTitle,
-                approvalContent: data.approval.approvalContent,
+                docNo: approval.docNo,
+                approvalTitle: approval.approvalTitle || '', 
+                approvalContent: approval.approvalContent || '',
                 
-                approvalLineList: data.lines.map(line => ({
+                // 결재선
+                approvalLineList: lines ? lines.map(line => ({
                     approverNo: line.approverNo,
                     name: line.empName,
-                    rank: line.jobName, 
-                    dept: '', 
+                    rank: line.positionName || line.jobName, 
+                    dept: line.deptName || '', 
                     appLineOrder: line.appLineOrder,
                     appLineStatus: line.appLineStatus
-                })),
+                })) : [],
 
-                vacationType: data.vacation?.vacationType || '연차',
-                startDate: data.vacation?.startDate || '',
-                endDate: data.vacation?.endDate || '',
+                // 휴가
+                vacationType: vacation?.vacationType || approval.vacationType || '연차',
+                startDate: vacation?.startDate || approval.startDate || '',
+                endDate: vacation?.endDate || approval.endDate || '',
 
-                totalAmount: data.expense?.totalAmount || 0,
-                expenseDetailList: data.expenseDetails || []
+                // 지출
+                totalAmount: expense?.totalAmount || approval.totalAmount || 0,
+                expenseDetailList: expenseDetails || []
             });
-            // (참고: 기존 파일 목록 처리는 생략됨)
         })
         .catch(err => {
             console.error(err);
-            alert("임시저장 데이터를 불러오는데 실패했습니다.");
         });
     }
-  }, [editDocNo]);
+  }, [editDocNo, loginMember]);
 
 
   const handleChange = (e) => {
@@ -123,29 +132,17 @@ export default function ApprovalWrite() {
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    if (files.length > 0) {
-        setSelectedFiles([files[0]]); 
-    }
+    if (files.length > 0) setSelectedFiles([files[0]]); 
     e.target.value = '';
   };
 
-  const removeFile = (indexToRemove) => {
-    setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
-  };
+  const removeFile = (index) => setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  const handleFileBoxClick = () => fileInputRef.current.click();
 
-  const handleFileBoxClick = () => {
-    fileInputRef.current.click();
-  };
-
-
-  // 🔥 [핵심 수정] 통합 제출 핸들러
   const handleSubmit = async (isTemp) => {
     if (!loginMember) return; 
     
-    if (!formData.approvalTitle) { 
-        alert("제목을 입력해주세요."); 
-        return; 
-    }
+    if (!formData.approvalTitle) { alert("제목을 입력해주세요."); return; }
 
     if (!isTemp) {
         if (!formData.approvalContent) { alert("내용을 입력해주세요."); return; }
@@ -154,7 +151,6 @@ export default function ApprovalWrite() {
     }
 
     const requestData = {
-      // 🔥 수정일 땐 문서번호가 있고, 신규일 땐 null (백엔드에서 이거 보고 판단함)
       docNo: editDocNo || null, 
       empNo: loginMember.empNo, 
       approvalTitle: formData.approvalTitle,
@@ -173,25 +169,16 @@ export default function ApprovalWrite() {
     const sendFormData = new FormData();
     const jsonBlob = new Blob([JSON.stringify(requestData)], { type: "application/json" });
     sendFormData.append("data", jsonBlob);
-
-    selectedFiles.forEach(file => {
-      sendFormData.append("files", file);
-    });
+    selectedFiles.forEach(file => sendFormData.append("files", file));
 
     try {
-      // 🔥 [핵심] 무조건 /insert로 통일 (백엔드가 docNo 유무로 Insert/Update 판단)
-      const response = await fetch("/api/approval/insert", {
-        method: "POST",
-        body: sendFormData, 
-      });
-
+      const response = await fetch("/api/approval/insert", { method: "POST", body: sendFormData });
       if (response.ok) {
         alert(isTemp ? "임시 저장되었습니다." : "성공적으로 상신되었습니다.");
-        // 상신이면 대기함, 임시저장이면 임시함으로 이동
         navigate(isTemp ? '/approval/temp' : '/approval/wait'); 
       } else {
-        const errorMsg = await response.text();
-        alert((isTemp ? "저장 실패: " : "상신 실패: ") + errorMsg);
+        const msg = await response.text();
+        alert((isTemp ? "저장 실패: " : "상신 실패: ") + msg);
       }
     } catch (error) {
       console.error(error);
@@ -210,7 +197,10 @@ export default function ApprovalWrite() {
         data: formData,
         onChange: handleChange,
         approvalLines: formData.approvalLineList,
-        loginMember: loginMember 
+        loginMember: loginMember,
+        readOnly: false,
+        // 🔥 [핵심] 키를 부여하여 데이터가 로드되면 폼을 강제로 다시 그리게 함 (ExpenseForm 버그 방지)
+        key: formData.docNo || "init" 
     };
     switch(formId) {
       case 'vacation': return <VacationForm {...commonProps} />;
@@ -226,24 +216,16 @@ export default function ApprovalWrite() {
         {/* 상단 툴바 */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 sticky top-0 z-10">
            <div className="flex gap-2">
-              <button 
-                onClick={() => handleSubmit(false)} 
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium"
-              >
+              <button onClick={() => handleSubmit(false)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-sm text-sm font-medium">
                 <FaPaperPlane /> {editDocNo ? "수정 상신" : "결재요청"}
               </button>
-              
-              <button 
-                onClick={() => handleSubmit(true)} 
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white rounded hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
-              >
+              <button onClick={() => handleSubmit(true)} className="flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white rounded hover:bg-gray-50 text-sm font-medium text-gray-700">
                 <FaSave /> 임시저장
               </button>
-              
-              <button onClick={handleCancelClick} className="flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white rounded hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors text-sm font-medium text-gray-700">
+              <button onClick={handleCancelClick} className="flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white rounded hover:bg-red-50 text-red-600 text-sm font-medium">
                 <FaTimes /> 취소
               </button>
-              <button onClick={() => setShowLineModal(true)} className="flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white rounded hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700">
+              <button onClick={() => setShowLineModal(true)} className="flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white rounded hover:bg-gray-50 text-sm font-medium text-gray-700">
                 <FaPaperclip /> 결재선 지정
               </button>
            </div>
@@ -264,67 +246,39 @@ export default function ApprovalWrite() {
                <FaPaperclip className="text-gray-500" />
                <span className="text-sm font-bold text-gray-700">파일 첨부</span>
              </div>
-             
-             <div 
-                onClick={handleFileBoxClick}
-                className="border border-dashed border-gray-300 bg-white rounded h-20 flex flex-col items-center justify-center text-gray-400 text-sm cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors"
-             >
+             <div onClick={handleFileBoxClick} className="border border-dashed border-gray-300 bg-white rounded h-20 flex flex-col items-center justify-center text-gray-400 text-sm cursor-pointer hover:bg-blue-50 transition-colors">
                 <p>파일을 마우스로 끌어 놓거나 여기를 클릭하세요.</p>
                 <span className="text-xs text-gray-300 mt-1">(최대 50MB)</span>
              </div>
-
-             <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                style={{ display: 'none' }} 
-                accept=".jpg,.jpeg,.png,.gif,.pdf,.hwp,.xlsx,.xls,.docx,.doc,.ppt,.pptx"
-             />
-
+             <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept=".jpg,.jpeg,.png,.gif,.pdf,.hwp,.xlsx,.xls,.docx,.doc,.ppt,.pptx" />
              {selectedFiles.length > 0 && (
                 <div className="mt-3 space-y-2">
                    {selectedFiles.map((file, index) => (
                       <div key={index} className="flex justify-between items-center bg-white border border-gray-200 p-2 rounded text-sm">
-                          <div className="flex items-center gap-2 text-gray-700">
-                             <FaPaperclip className="text-gray-400" />
-                             <span>{file.name}</span>
-                             <span className="text-xs text-gray-400">({(file.size / 1024).toFixed(1)} KB)</span>
-                          </div>
-                          <button onClick={() => removeFile(index)} className="text-gray-400 hover:text-red-500">
-                             <FaTrash />
-                          </button>
+                          <div className="flex items-center gap-2 text-gray-700"><FaPaperclip className="text-gray-400" /><span>{file.name}</span></div>
+                          <button onClick={() => removeFile(index)} className="text-gray-400 hover:text-red-500"><FaTrash /></button>
                       </div>
                    ))}
                 </div>
              )}
           </div>
         </div>
-
       </div>
 
-      {/* 모달들 */}
       {showCancelModal && (
          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-             <div className="bg-white rounded-lg shadow-2xl p-6 w-96 border border-gray-200 transform transition-all scale-100">
-            <div className="flex items-center gap-3 mb-4 text-amber-500">
-              <FaExclamationTriangle size={24} />
-              <h3 className="text-lg font-bold text-gray-800">작성 취소</h3>
-            </div>
-            <p className="text-gray-600 mb-6 leading-relaxed text-sm">작성 중인 내용은 저장되지 않습니다.<br/>나가시겠습니까?</p>
+             <div className="bg-white rounded-lg shadow-2xl p-6 w-96 border border-gray-200">
+            <div className="flex items-center gap-3 mb-4 text-amber-500"><FaExclamationTriangle size={24} /><h3 className="text-lg font-bold">작성 취소</h3></div>
+            <p className="text-gray-600 mb-6 text-sm">작성 중인 내용은 저장되지 않습니다.<br/>나가시겠습니까?</p>
             <div className="flex justify-end gap-3">
-              <button onClick={closeModal} className="px-4 py-2 rounded text-gray-600 hover:bg-gray-100 font-medium transition-colors text-sm">계속 작성하기</button>
-              <button onClick={confirmCancel} className="px-4 py-2 rounded bg-red-500 hover:bg-red-600 text-white font-medium shadow-md transition-colors text-sm">나가기</button>
+              <button onClick={closeModal} className="px-4 py-2 rounded text-gray-600 hover:bg-gray-100 text-sm">계속 작성하기</button>
+              <button onClick={confirmCancel} className="px-4 py-2 rounded bg-red-500 text-white text-sm">나가기</button>
             </div>
           </div>
         </div>
       )}
 
-      <ApprovalLineModal 
-        isOpen={showLineModal} 
-        onClose={() => setShowLineModal(false)} 
-        onConfirm={handleLineSave} 
-        drafter={loginMember}
-      />
+      <ApprovalLineModal isOpen={showLineModal} onClose={() => setShowLineModal(false)} onConfirm={handleLineSave} drafter={loginMember} />
     </div>
   );
 }
