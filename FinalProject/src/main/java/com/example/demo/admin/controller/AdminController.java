@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -126,6 +127,25 @@ public class AdminController {
                     .body(Map.of("message", "서버 오류")); // 500
 		}
 	}
+	
+	//직원 퇴사
+	@PutMapping("/empResigned/{empNo}")
+	public ResponseEntity<Void> empResigned(@PathVariable("empNo") String empNo){
+		
+		int result = service.empResigned(empNo);
+		if(result == 0) return 	ResponseEntity.notFound().build();
+			return ResponseEntity.ok().build();
+	}
+	
+	//직원 퇴사 복귀
+	@PutMapping("/empReturn/{empNo}")
+	public ResponseEntity<Void> empReturn(@PathVariable("empNo") String empNo){
+		
+		int result = service.empReturn(empNo);
+		if(result == 0) return 	ResponseEntity.notFound().build();
+			return ResponseEntity.ok().build();
+	}
+	
 	// 주영
 	// 연차 일괄 생성 (관리자용)
     @PostMapping("grant-leave")

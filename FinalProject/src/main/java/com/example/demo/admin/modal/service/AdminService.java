@@ -25,5 +25,11 @@ public interface AdminService {
 	Map<String, Object> createEmployee(CreateEmployeeRequest req, String empNo);
 
 	Map<String, Object> updateEmployee(UpdateEmployeeRequest req);
+	
+	//직원 퇴사
+	int empResigned(String empNo);
+	
+	//직원 퇴사 복귀
+	int empReturn(String empNo);
 
 }

@@ -99,6 +99,20 @@ public class AdminServiceImpl implements AdminService{
         return Map.of("empNo", createdEmpNo, "empId", req.empId(), "tempPw", tempPw);
 	}
 
+	//직원 퇴사
+	@Override
+	public int empResigned(String empNo) {
+		int result = mapper.empResigned(empNo);
+		return result;
+	}
+	
+	//직원 퇴사 복귀
+	@Override
+	public int empReturn(String empNo) {
+		int result = mapper.empReturn(empNo);
+		return result;
+	}
+	
 	@Override
 	public Map<String, Object> updateEmployee(UpdateEmployeeRequest req) {
 		
@@ -123,5 +137,4 @@ public class AdminServiceImpl implements AdminService{
 	    
 		return Map.of("success", true);
 	}
-
 }

@@ -33,4 +33,8 @@ public interface AdminMapper {
 
 	int updateEmployee(@Param("req") UpdateEmployeeRequest req);
 
+	int empResigned(String empNo);
+
+	int empReturn(String empNo);
+
 }

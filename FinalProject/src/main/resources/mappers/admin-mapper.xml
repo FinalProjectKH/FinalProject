@@ -125,6 +125,20 @@
    	</set>
     WHERE EMP_NO = #{req.empNo}
 	</update>
-
+	
+	<update id="empResigned">
+	UPDATE "EMPLOYEE"
+	SET EMP_DEL_FL = 'Y'
+	WHERE EMP_NO = #{empNo}
+	AND EMP_DEL_FL = 'N'
+	</update>
+	
+	<update id="empReturn">
+	UPDATE "EMPLOYEE"
+	SET EMP_DEL_FL = 'N'
+	WHERE EMP_NO = #{empNo}
+	AND EMP_DEL_FL = 'Y'
+	</update>
+	
    
 </mapper>
