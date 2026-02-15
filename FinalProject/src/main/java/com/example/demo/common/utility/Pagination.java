@@ -4,6 +4,16 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+// 사용방법
+// SELECT * FROM (
+//        SELECT ROWNUM RNUM, A.* FROM (
+//            게시물 조회 SQL
+//              )
+//            ORDER BY A.DOC_NO DESC
+//        ) A
+//    ) WHERE RNUM BETWEEN #{pagination.startRow} AND #{pagination.endRow}
+
+
 @Getter
 @Setter
 @ToString

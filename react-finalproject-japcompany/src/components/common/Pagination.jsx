@@ -1,6 +1,24 @@
 import React from 'react';
 import { FaChevronLeft, FaChevronRight, FaAngleDoubleLeft, FaAngleDoubleRight } from 'react-icons/fa';
 
+
+
+
+// 사용방법
+//   const [page, setPage] = useState(1);       // 현재 페이지
+//   const [pagination, setPagination] = useState(null); // 페이징 메타데이터
+// -> pagination 사용할 jsx에 상수 선언
+
+//         {/*  페이지네이션 컴포넌트 렌더링 */}
+// {!loading && docList.length > 0 && pagination && (
+//     <Pagination 
+//         pagination={pagination} 
+//         setPage={setPage} 
+//     />
+// )}
+
+
+
 export default function Pagination({ pagination, setPage }) {
   // pagination 정보가 없으면 아무것도 안 그림
   if (!pagination) return null;
