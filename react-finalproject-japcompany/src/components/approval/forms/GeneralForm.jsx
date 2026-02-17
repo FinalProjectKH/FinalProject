@@ -80,10 +80,6 @@ export default function GeneralForm({ data, onChange, approvalLines = [], loginM
         <colgroup><col width="120" /><col width="680" /></colgroup>
         <tbody>
           <tr>
-            <td style={styles.label}>참 조</td>
-            <td style={styles.inputCell}><input type="text" style={styles.input} placeholder="참조자 입력" disabled={readOnly} /></td>
-          </tr>
-          <tr>
             <td style={styles.label}>제 목</td>
             <td style={styles.inputCell}>
               <input 
@@ -99,7 +95,7 @@ export default function GeneralForm({ data, onChange, approvalLines = [], loginM
           </tr>
           <tr><td style={styles.label} colSpan={2}>상&nbsp;&nbsp;세&nbsp;&nbsp;내&nbsp;&nbsp;용</td></tr>
           <tr>
-            <td colSpan={2} style={{ padding: "15px", border: "1px solid black", height: "400px", verticalAlign: "top" }}>
+            <td colSpan={2} style={{ padding: "15px", border: "1px solid black", height: "600px", verticalAlign: "top" }}>
               <textarea 
                 name="approvalContent" 
                 value={data.approvalContent || ''} 

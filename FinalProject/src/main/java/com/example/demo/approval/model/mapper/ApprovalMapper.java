@@ -1,6 +1,7 @@
 package com.example.demo.approval.model.mapper;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -9,6 +10,7 @@ import com.example.demo.approval.model.dto.ApprovalDto;
 import com.example.demo.approval.model.dto.ApprovalLineDto;
 import com.example.demo.approval.model.dto.ExpenseDetailDto;
 import com.example.demo.approval.model.dto.TotalVacationDto;
+import com.example.demo.common.utility.Pagination;
 
 @Mapper
 public interface ApprovalMapper {
@@ -31,20 +33,26 @@ public interface ApprovalMapper {
 	// 휴가신청서 등록
 	void insertApprovalVacation(ApprovalDto dto);
 
-	// 결재 대기 문서
-	List<ApprovalDto> selectWaitList(int empNo);
+    // ==============================================================
+    // 🔥 [핵심 수정] 파라미터가 2개(empNo, pagination)이므로 @Param 필수!
+    // ==============================================================
 
-	// 결재 예정 문서
-	List<ApprovalDto> selectUpcomingList(int empNo);
+	// 1. 결재 대기 문서 (페이징)
+	List<ApprovalDto> selectWaitList(@Param("empNo") String empNo, @Param("pagination") Pagination pagination);
 
-	// 기안 문서함
-	List<ApprovalDto> selectMyDraftList(int empNo);
+	// 2. 결재 예정 문서 (페이징)
+	List<ApprovalDto> selectUpcomingList(@Param("empNo") String empNo, @Param("pagination") Pagination pagination);
 
-	// 임시 저장함
-	List<ApprovalDto> selectTempList(int empNo);
+	// 3. 기안 문서함 (페이징)
+	List<ApprovalDto> selectMyDraftList(@Param("empNo") String empNo, @Param("pagination") Pagination pagination);
 
-	// 결재 문서함
-	List<ApprovalDto> selectMyApprovedList(int empNo);
+	// 4. 임시 저장함 (페이징)
+	List<ApprovalDto> selectTempList(@Param("empNo") String empNo, @Param("pagination") Pagination pagination);
+
+	// 5. 결재 문서함 (페이징)
+	List<ApprovalDto> selectMyApprovedList(@Param("empNo") String empNo, @Param("pagination") Pagination pagination);
+    
+    // ==============================================================
 
 	
 	ApprovalDto selectApprovalDetail(String docNo);
@@ -58,6 +66,8 @@ public interface ApprovalMapper {
 	List<ExpenseDetailDto> selectExpenseDetailList(String docNo);
 
 	int updateApproval(ApprovalDto dto);
+
+    void deleteApproval(String docNo); // 순서 정리
 
 	void deleteApprovalLine(String docNo);
 
@@ -77,14 +87,12 @@ public interface ApprovalMapper {
 
 	int updateApprovalToTemp(ApprovalDto dto);
 
+    // 메인 홈 & 사이드바 카운트
 	int countWait(String empNo);
-
 	int countDraft(String empNo);
-
 	int countApproved(String empNo);
 
 	List<ApprovalDto> selectWaitListTop5(String empNo);
-
 	List<ApprovalDto> selectDraftListTop5(String empNo);
 	
 	// 1. 내 연차 정보 조회 (연도, 사번 필요)
@@ -105,5 +113,22 @@ public interface ApprovalMapper {
 
 	// 3. 연차 20개 생성 (INSERT)
 	int insertTotalVacation(TotalVacationDto dto);
+
+	// 공휴일 체크
+	List<String> selectHolidayList(
+	        @Param("startDate") String startDate, 
+	        @Param("endDate") String endDate
+	    );
+
+	String selectDeductYn(String type);
+
+	Map<String, Object> selectSidebarCounts(String empNo);
+
+	// Pagination Total Count (전체 개수 조회)
+	int getWaitListCount(String empNo);
+	int getUpcomingListCount(String empNo);
+	int getMyDraftListCount(String empNo);
+	int getTempListCount(String empNo);
+	int getMyApprovedListCount(String empNo);
 
 }
