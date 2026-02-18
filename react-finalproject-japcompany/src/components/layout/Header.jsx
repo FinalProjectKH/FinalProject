@@ -3,6 +3,7 @@ import { ProfileModal } from "../modal";
 import { Search } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import  MyInfoModal from "../modal/MyInfoModal";
+import PasswordModal from "../modal/PasswordModal "
 
 const userDefaultImg = "/image/user.png"
 
@@ -82,10 +83,10 @@ const Header = () => {
         onClose={() => setOpenMyInfo(false)}
        />
 
-      {/* <PasswordModal
+      <PasswordModal
         open={openPassword}
         onClose={() => setOpenPassword(false)}
-      /> */}
+      />
 
     </header>
   );
