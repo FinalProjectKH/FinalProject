@@ -379,8 +379,8 @@ public class ApprovalServiceImpl implements ApprovalService {
             return 0.0;
         }
 
-        String deductionYn = mapper.selectDeductYn(type);
-        if (deductionYn == null || "N".equals(deductionYn)) {
+        String deductYn = mapper.selectDeductYn(type);
+        if (deductYn == null || "N".equals(deductYn)) {
             return 0.0;
         }
 

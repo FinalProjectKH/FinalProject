@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-// 🔥 useSearchParams 추가!
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'; 
 import { FaTimes, FaSave, FaPaperPlane, FaPaperclip, FaExclamationTriangle, FaTrash } from 'react-icons/fa';
 
@@ -12,9 +11,9 @@ export default function ApprovalWrite() {
   const { formId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams(); // 🔥 주소창 파라미터 읽기 기능
+  const [searchParams] = useSearchParams();
 
-  // 🔥 [핵심 수정] state에도 없고, 주소창(searchParams)에도 없으면 undefined
+  // 수정 모드일 때 docNo 가져오기
   const editDocNo = location.state?.docNo || searchParams.get('docNo');
 
   // 상태 관리
@@ -25,6 +24,7 @@ export default function ApprovalWrite() {
   const [selectedFiles, setSelectedFiles] = useState([]); 
   const fileInputRef = useRef(null); 
 
+  // 초기 데이터 구조
   const initialFormData = {
     docNo: '', 
     approvalTitle: '', 
@@ -34,7 +34,8 @@ export default function ApprovalWrite() {
     totalAmount: 0,
     vacationType: '연차', 
     startDate: '', 
-    endDate: ''
+    endDate: '',
+    totalUse: 0 
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -54,7 +55,7 @@ export default function ApprovalWrite() {
     .catch(err => console.error(err));
   }, []);
 
-  // 2. 초기화 (신규 작성일 때만)
+  // 2. 초기화 (신규 작성일 때)
   useEffect(() => {
     if (!editDocNo) {
         setFormData(initialFormData);
@@ -62,8 +63,7 @@ export default function ApprovalWrite() {
     }
   }, [formId, editDocNo]);
 
-
-  // 3. 🔥 [데이터 로드] 수정 모드일 때
+  // 3. 데이터 로드 (수정 모드일 때)
   useEffect(() => {
     if (editDocNo && loginMember?.empNo) {
       console.log("데이터 로드 시작: ", editDocNo);
@@ -74,11 +74,7 @@ export default function ApprovalWrite() {
             return res.json();
         })
         .then(result => {
-            console.log("백엔드 응답:", result);
-            
-            // 🔥 Map 구조 해체 (JSON 구조에 맞춤)
             const { approval, lines, vacation, expense, expenseDetails } = result;
-
             if (!approval) return;
 
             setFormData({
@@ -86,7 +82,7 @@ export default function ApprovalWrite() {
                 approvalTitle: approval.approvalTitle || '', 
                 approvalContent: approval.approvalContent || '',
                 
-                // 결재선
+                // 결재선 매핑
                 approvalLineList: lines ? lines.map(line => ({
                     approverNo: line.approverNo,
                     name: line.empName,
@@ -96,23 +92,68 @@ export default function ApprovalWrite() {
                     appLineStatus: line.appLineStatus
                 })) : [],
 
-                // 휴가
+                // 휴가 데이터 매핑
                 vacationType: vacation?.vacationType || approval.vacationType || '연차',
                 startDate: vacation?.startDate || approval.startDate || '',
                 endDate: vacation?.endDate || approval.endDate || '',
+                totalUse: vacation?.totalUse || approval.totalUse || 0, 
 
-                // 지출
+                // 지출 데이터 매핑
                 totalAmount: expense?.totalAmount || approval.totalAmount || 0,
                 expenseDetailList: expenseDetails || []
             });
         })
-        .catch(err => {
-            console.error(err);
-        });
+        .catch(err => console.error(err));
     }
   }, [editDocNo, loginMember]);
 
+  // =================================================================
+  // 🔥🔥🔥 [핵심] 백엔드 API 연차 계산기 호출
+  // =================================================================
+  useEffect(() => {
+    // 1. 필수 조건 체크: 휴가 양식이 아니거나 날짜가 하나라도 비어있으면 중단
+    if (formId !== 'vacation' || !formData.startDate || !formData.endDate) {
+        return;
+    }
 
+    // 2. 백엔드 API 호출 (Debounce 적용)
+    const timer = setTimeout(() => {
+        // ⚠️ [중요] 백엔드 @RequestParam 이름(start, end, type)과 정확히 일치해야 함
+        const queryParams = new URLSearchParams({
+            start: formData.startDate,
+            end: formData.endDate,
+            type: formData.vacationType
+        }).toString();
+
+        console.log("🚀 연차 계산 요청:", queryParams);
+
+        fetch(`/api/approval/calculate-days?${queryParams}`)
+        .then(res => {
+            if (!res.ok) {
+                console.error("계산 API 호출 실패");
+                return 0;
+            }
+            return res.json();
+        })
+        .then(days => {
+            console.log(`✅ 계산된 일수: ${days}일`);
+            setFormData(prev => ({ ...prev, totalUse: days }));
+        })
+        .catch(err => {
+            console.error("연차 계산 중 오류 발생:", err);
+            // 에러 발생 시 0으로 초기화
+            setFormData(prev => ({ ...prev, totalUse: 0 }));
+        });
+    }, 300); // 0.3초 딜레이 (사용자가 날짜를 빠르게 바꿀 때 과도한 요청 방지)
+
+    return () => clearTimeout(timer);
+
+  }, [formData.startDate, formData.endDate, formData.vacationType, formId]);
+
+
+  // =================================================================
+  // 핸들러 함수들
+  // =================================================================
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -147,6 +188,7 @@ export default function ApprovalWrite() {
     if (!isTemp) {
         if (!formData.approvalContent) { alert("내용을 입력해주세요."); return; }
         if (formId === 'expense' && formData.totalAmount <= 0) { alert("지출 내역을 작성해주세요."); return; }
+        if (formId === 'vacation' && formData.totalUse <= 0) { alert("휴가 기간을 올바르게 입력해주세요. (0일)"); return; }
         if (!formData.approvalLineList || formData.approvalLineList.length === 0) { alert("결재선을 지정해주세요."); return; }
     }
 
@@ -157,12 +199,17 @@ export default function ApprovalWrite() {
       approvalContent: formData.approvalContent,
       retentionYear: 5,                
       approvalLineList: formData.approvalLineList,
+      
+      // 지출결의서
       totalAmount: formId === 'expense' ? formData.totalAmount : 0,
       expenseDetailList: formId === 'expense' ? formData.expenseDetailList : [],
+      
+      // 휴가신청서
       vacationType: formId === 'vacation' ? formData.vacationType : null,
       startDate: formId === 'vacation' ? formData.startDate : null,
       endDate: formId === 'vacation' ? formData.endDate : null,
-      totalUse: 0,
+      totalUse: formId === 'vacation' ? formData.totalUse : 0,
+      
       tempSaveYn: isTemp ? "Y" : "N"
     };
 
@@ -192,22 +239,24 @@ export default function ApprovalWrite() {
 
   if (!loginMember) return <div className="flex justify-center items-center h-screen">로딩중...</div>;
 
-  const renderFormComponent = () => {
-    const commonProps = {
-        data: formData,
-        onChange: handleChange,
-        approvalLines: formData.approvalLineList,
-        loginMember: loginMember,
-        readOnly: false,
-        // 🔥 [핵심] 키를 부여하여 데이터가 로드되면 폼을 강제로 다시 그리게 함 (ExpenseForm 버그 방지)
-        key: formData.docNo || "init" 
-    };
-    switch(formId) {
-      case 'vacation': return <VacationForm {...commonProps} />;
-      case 'expense':  return <ExpenseForm {...commonProps} />;
-      default:         return <GeneralForm {...commonProps} />;
-    }
+  // 🔥 [핵심 수정] 렌더링 에러 해결을 위해 함수 호출 방식 제거
+  // 컴포넌트를 변수에 할당하여 태그로 사용
+  const formKey = formData.docNo || "init";
+  
+  const commonProps = {
+      data: formData,
+      onChange: handleChange,
+      approvalLines: formData.approvalLineList,
+      loginMember: loginMember,
+      readOnly: false,
   };
+
+  let CurrentForm;
+  switch(formId) {
+      case 'vacation': CurrentForm = VacationForm; break;
+      case 'expense':  CurrentForm = ExpenseForm; break;
+      default:         CurrentForm = GeneralForm; break;
+  }
 
   return (
     <div className="bg-gray-100 min-h-screen py-8 flex justify-center overflow-y-auto relative">
@@ -236,7 +285,8 @@ export default function ApprovalWrite() {
 
         {/* 양식 영역 */}
         <div className="p-8 flex-1 flex justify-center">
-          {renderFormComponent()}
+            {/* 🔥 함수 호출 대신 컴포넌트 변수 사용 */}
+            <CurrentForm key={formKey} {...commonProps} />
         </div>
         
         {/* 파일 첨부 영역 */}
