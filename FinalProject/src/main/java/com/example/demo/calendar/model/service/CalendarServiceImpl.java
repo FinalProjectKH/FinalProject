@@ -12,16 +12,21 @@ import com.example.demo.calendar.model.entity.CalendarCategoryEntity;
 import com.example.demo.calendar.model.entity.CalendarEntity;
 import com.example.demo.calendar.model.repository.CalendarCategoryRepository;
 import com.example.demo.calendar.model.repository.CalendarRepository;
+import com.example.demo.employee.model.dto.LoginMemberDTO;
+import com.example.demo.employee.model.mapper.EmployeeMapper;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class CalendarServiceImpl implements CalendarService {
 	
 	private final CalendarRepository calendarRepository;
-	private final CalendarCategoryRepository categoryRepository; // 변수명 통일
+	private final CalendarCategoryRepository categoryRepository;
+    private final EmployeeMapper employeeMapper; 
 	
     // ==========================================
     // 1. 일정(Event) 관련
@@ -29,12 +34,15 @@ public class CalendarServiceImpl implements CalendarService {
     
     @Override
     public CalendarDto createEvent(CalendarDto dto) {
-        // 1. 선택한 카테고리 조회
         Long categoryId = Long.parseLong(dto.getTypeId()); 
         CalendarCategoryEntity categoryEntity = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new IllegalArgumentException("카테고리 없음 ID=" + categoryId));
 
-        // 2. 엔티티 생성
+        // [권한 체크] 전사 캘린더('3')인 경우
+        if ("3".equals(categoryEntity.getType())) {
+            checkCompanyCalendarPermission(dto.getEmpNo());
+        }
+
         CalendarEntity entity = CalendarEntity.builder()
                 .empNo(dto.getEmpNo())
                 .calTitle(dto.getCalTitle())
@@ -42,8 +50,11 @@ public class CalendarServiceImpl implements CalendarService {
                 .startDate(dto.getCalStartDt())
                 .endDate(dto.getCalEndDt())
                 .location(dto.getCalLocation())
-                .calCategory(categoryEntity) 
-                .typeId(categoryEntity.getType()) // Entity에 필드가 없다면 주석 처리
+                .calCategory(categoryEntity)
+                
+                // 🔥🔥🔥 [수정] 이 부분이 빠져서 에러가 났습니다! 다시 추가!
+                .typeId(categoryEntity.getType()) 
+                
                 .alldayYn(dto.getAlldayYn())
                 .openYn(dto.getOpenYn())
                 .build();
@@ -64,7 +75,18 @@ public class CalendarServiceImpl implements CalendarService {
         CalendarEntity entity = calendarRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 일정이 없습니다. id=" + id));
         
-        // Dirty Checking (값 변경 시 자동 Update)
+        // [수정] 수정 권한 체크
+        boolean isCompanyEvent = entity.getCalCategory() != null && "3".equals(entity.getCalCategory().getType());
+        
+        if (isCompanyEvent) {
+             checkCompanyCalendarPermission(dto.getEmpNo()); 
+        } else {
+             if (!entity.getEmpNo().equals(dto.getEmpNo())) {
+                 throw new SecurityException("본인의 일정만 수정할 수 있습니다.");
+             }
+        }
+        
+        // Dirty Checking
         if (dto.getCalTitle() != null) entity.setCalTitle(dto.getCalTitle());
         if (dto.getCalContent() != null) entity.setCalContent(dto.getCalContent());
         if (dto.getCalLocation() != null) entity.setLocation(dto.getCalLocation());
@@ -75,7 +97,7 @@ public class CalendarServiceImpl implements CalendarService {
         if (dto.getAlldayYn() != null) entity.setAlldayYn(dto.getAlldayYn());
         if (dto.getOpenYn() != null) entity.setOpenYn(dto.getOpenYn());
         
-        // 카테고리가 변경되었을 경우 로직
+        // 카테고리 변경 시
         if (dto.getTypeId() != null) {
             Long newCategoryId = Long.parseLong(dto.getTypeId());
             
@@ -83,7 +105,14 @@ public class CalendarServiceImpl implements CalendarService {
                  CalendarCategoryEntity newCategory = categoryRepository.findById(newCategoryId)
                          .orElseThrow(() -> new IllegalArgumentException("카테고리 없음 ID=" + newCategoryId));
                  
-                 entity.setCalCategory(newCategory); // 연관관계 변경
+                 if ("3".equals(newCategory.getType())) {
+                     checkCompanyCalendarPermission(dto.getEmpNo());
+                 }
+                 
+                 entity.setCalCategory(newCategory);
+                 
+                 // 🔥🔥🔥 [수정] 카테고리가 바뀌면 typeId(일정 타입)도 같이 바꿔줘야 데이터가 안 꼬입니다.
+                 entity.setTypeId(newCategory.getType()); 
             }
         }
         
@@ -95,15 +124,39 @@ public class CalendarServiceImpl implements CalendarService {
         CalendarEntity entity = calendarRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 일정이 없습니다."));
 
-        if (!entity.getEmpNo().equals(empNo)) {
-            throw new IllegalArgumentException("본인의 일정만 삭제할 수 있습니다!");
+        // [수정] 삭제 권한 체크
+        boolean isCompanyEvent = entity.getCalCategory() != null && "3".equals(entity.getCalCategory().getType());
+
+        if (isCompanyEvent) {
+            checkCompanyCalendarPermission(empNo);
+        } else {
+            if (!entity.getEmpNo().equals(empNo)) {
+                throw new SecurityException("본인의 일정만 삭제할 수 있습니다!"); 
+            }
         }
 
         calendarRepository.delete(entity);
     }
+    
+    // =========================================================
+    // 전사 캘린더 권한 체크
+    // =========================================================
+    private void checkCompanyCalendarPermission(String empNo) {
+        LoginMemberDTO emp = employeeMapper.login(empNo);
+        
+        if (emp == null) {
+            throw new IllegalArgumentException("사용자 정보가 없습니다.");
+        }
+        
+        // 권한 레벨 체크 (3 미만이면 차단)
+        if (emp.getAuthorityLevel() < 3) { 
+            log.warn("전사 캘린더 접근 권한 없음: {}", empNo);
+            throw new SecurityException("전사 일정은 관리자만 등록/수정/삭제할 수 있습니다.");
+        }
+    }
 
     // ==========================================
-    // 2. 카테고리(Category) 관련
+    // 2. 카테고리(Category) 관련 (기존 코드 유지)
     // ==========================================
 
     @Override
@@ -112,40 +165,26 @@ public class CalendarServiceImpl implements CalendarService {
         List<CalendarCategoryEntity> entities = categoryRepository.findByUserPermissions(empNo, deptCode);
 
         if (entities.isEmpty()) {
-            System.out.println(">>> [Service] 카테고리 없음! 기본값 생성 시작...");
+             CalendarCategoryEntity myCal = CalendarCategoryEntity.builder()
+                     .name("내 캘린더").color("#9e5fff").type("1").ownerEmpNo(empNo).deptCode(deptCode).build();
+             CalendarCategoryEntity teamCal = CalendarCategoryEntity.builder()
+                     .name("팀 캘린더").color("#00a9ff").type("2").ownerEmpNo(empNo).deptCode(deptCode).build();
 
-            CalendarCategoryEntity myCal = CalendarCategoryEntity.builder()
-                    .name("내 캘린더")
-                    .color("#9e5fff") 
-                    .type("1")        
-                    .ownerEmpNo(empNo)
-                    .deptCode(deptCode)
-                    .build();
-            
-            CalendarCategoryEntity teamCal = CalendarCategoryEntity.builder()
-                    .name("팀 캘린더")
-                    .color("#00a9ff") 
-                    .type("2")        
-                    .ownerEmpNo(empNo) 
-                    .deptCode(deptCode) 
-                    .build();
+             categoryRepository.save(myCal);
+             categoryRepository.save(teamCal);
 
-            categoryRepository.save(myCal);
-            categoryRepository.save(teamCal);
-
-            entities.add(myCal);
-            entities.add(teamCal);
-            
-            System.out.println(">>> [Service] 기본 카테고리 생성 완료!");
+             entities.add(myCal);
+             entities.add(teamCal);
         }
-
-        return entities.stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+        return entities.stream().map(this::toDto).collect(Collectors.toList());
     }
 
     @Override
     public CalendarCategoryDto createCategory(CalendarCategoryDto dto) {
+        if ("3".equals(dto.getCategory())) {
+            checkCompanyCalendarPermission(dto.getOwnerEmpNo());
+        }
+
         CalendarCategoryEntity entity = CalendarCategoryEntity.builder()
                 .name(dto.getName())
                 .color(dto.getColor())
@@ -154,15 +193,17 @@ public class CalendarServiceImpl implements CalendarService {
                 .deptCode(dto.getDeptCode())
                 .build();
         
-        CalendarCategoryEntity saved = categoryRepository.save(entity);
-        
-        return toDto(saved); // 중복 코드 제거 (toDto 활용)
+        return toDto(categoryRepository.save(entity));
     }
     
     @Override
     public CalendarCategoryDto updateCategory(Long id, CalendarCategoryDto dto) {
         CalendarCategoryEntity entity = categoryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 카테고리가 없습니다. id=" + id));
+        
+        if ("3".equals(entity.getType())) {
+            checkCompanyCalendarPermission(dto.getOwnerEmpNo());
+        }
         
         if (dto.getName() != null) entity.setName(dto.getName());
         if (dto.getColor() != null) entity.setColor(dto.getColor()); 
@@ -173,45 +214,36 @@ public class CalendarServiceImpl implements CalendarService {
 
     @Override
     public void deleteCategory(Long id) {
-        // FK 제약조건 때문에 연결된 일정을 먼저 지워야 함 (CASCADE 설정 안 되어 있다면 필수)
         calendarRepository.deleteByCalCategory_Id(id);
         categoryRepository.deleteById(id);
     }
 
-    // ==========================================
-    // 🔥 [핵심 기능] 휴가 카테고리 ID 가져오기 (없으면 생성)
-    // ==========================================
     @Override
     public String getOrCreateVacationCategoryId(String empNo) {
-        // 🔥 [수정] calendarRepository -> categoryRepository 로 변경해야 함!
         return categoryRepository.findByNameAndOwnerEmpNo("휴가", empNo)
                 .map(entity -> String.valueOf(entity.getId())) 
                 .orElseGet(() -> {
                     CalendarCategoryEntity newCat = CalendarCategoryEntity.builder()
                             .name("휴가")            
-                            .color("#FF6B6B")        // 빨간색
+                            .color("#FF6B6B")        
                             .ownerEmpNo(empNo)       
-                            .type("1")               // '1'(개인) 또는 '3'(전사) 등 정책에 맞게
+                            .type("1")               
                             .deptCode(null)          
                             .build();
                     
-                    // 🔥 [수정] 변수명 통일 (categoryRepository)
                     CalendarCategoryEntity saved = categoryRepository.save(newCat);
-                    System.out.println("✅ '휴가' 카테고리 생성 완료. ID: " + saved.getId());
-                    
                     return String.valueOf(saved.getId());
                 });
     }
 
-
-    // ==========================================
-    // DTO 변환 메서드
-    // ==========================================
     private CalendarDto toDto(CalendarEntity entity) {
         String colorCode = "#000000"; 
         if (entity.getCalCategory() != null) {
             colorCode = entity.getCalCategory().getColor(); 
         }
+        String typeId = (entity.getCalCategory() != null && entity.getCalCategory().getId() != null) 
+                        ? String.valueOf(entity.getCalCategory().getId()) 
+                        : null;
 
         return CalendarDto.builder()
                 .calNo(entity.getCalNo())
@@ -221,7 +253,7 @@ public class CalendarServiceImpl implements CalendarService {
                 .calEndDt(entity.getEndDate())
                 .calLocation(entity.getLocation())
                 .calColor(colorCode) 
-                .typeId(entity.getCalCategory() != null ? String.valueOf(entity.getCalCategory().getId()) : null)
+                .typeId(typeId)
                 .alldayYn(entity.getAlldayYn())
                 .openYn(entity.getOpenYn())
                 .empNo(entity.getEmpNo())
@@ -230,7 +262,6 @@ public class CalendarServiceImpl implements CalendarService {
     
     private CalendarCategoryDto toDto(CalendarCategoryEntity entity) {
         if (entity == null) return null;
-        
         return CalendarCategoryDto.builder()
                 .id(String.valueOf(entity.getId()))
                 .name(entity.getName())

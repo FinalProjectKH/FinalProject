@@ -17,7 +17,7 @@ interface EventModalProps {
   setValues: React.Dispatch<React.SetStateAction<ModalState>>;
   calendars: CalendarCategory[];
   authLevel: number;
-  meetingRooms?: string[]; // 🔥 [추가] 회의실 목록 (선택적)
+  meetingRooms?: string[]; 
 }
 
 export default function EventModal({
@@ -29,7 +29,7 @@ export default function EventModal({
   setValues,
   calendars,
   authLevel,
-  meetingRooms = [] // 🔥 [추가] 기본값 빈 배열
+  meetingRooms = [] 
 }: EventModalProps) {
   
   const [selectedType, setSelectedType] = useState('1');
@@ -44,6 +44,7 @@ export default function EventModal({
       if (currentCal) {
         setSelectedType(currentCal.category);
       } else {
+        // 기존 값이 없거나 못 찾으면 기본값 '1'(내 캘린더)
         setSelectedType('1');
       }
     }
@@ -65,20 +66,29 @@ export default function EventModal({
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newType = e.target.value;
     setSelectedType(newType);
+    
+    // 타입 변경 시 해당 타입의 첫 번째 카테고리로 자동 선택
     const firstCategoryInNewType = calendars.find(c => c.category === newType);
     if (firstCategoryInNewType) {
-        setValues(prev => ({ ...prev, calendarId: firstCategoryInNewType.id }));
+        setValues(prev => ({ ...prev, calendarId: firstCategoryInNewType.id, type: newType }));
     } else {
-        setValues(prev => ({ ...prev, calendarId: '' }));
+        setValues(prev => ({ ...prev, calendarId: '', type: newType }));
     }
   };
 
-  // 날짜 포맷팅
+  // 🔥 [개선] 날짜 포맷팅 (Timezone 이슈 방지 및 안정성 강화)
   const formatDate = (date: Date, isAllday: boolean) => {
     if (!date) return '';
-    const d = new Date(date);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return isAllday ? d.toISOString().slice(0, 10) : d.toISOString().slice(0, 16);
+    try {
+        const d = new Date(date);
+        const offset = d.getTimezoneOffset() * 60000;
+        const localDate = new Date(d.getTime() - offset);
+        return isAllday 
+            ? localDate.toISOString().slice(0, 10) 
+            : localDate.toISOString().slice(0, 16);
+    } catch (e) {
+        return '';
+    }
   };
 
   const handleDateChange = (name: string, val: string) => {
@@ -87,18 +97,22 @@ export default function EventModal({
 
   if (!isOpen) return null;
 
-  // 🔥 현재 선택된 장소가 회의실 목록에 있는지 확인
-  // 목록에 없으면 'direct'(직접 입력) 모드로 간주
+  // 현재 선택된 장소가 회의실 목록에 있는지 확인
   const isDirectLocation = !meetingRooms.includes(values.location);
 
+  // 🔥 [보안] 전사 캘린더('3') 선택 시 권한 체크
+  const isCompanyCalendarSelected = selectedType === '3';
+  const hasPermission = !isCompanyCalendarSelected || authLevel >= 3;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-[600px] p-6 relative animate-fade-in-down">
+    // 🔥 [개선] z-index를 9999로 높여서 캘린더 위에 확실히 뜨게 함
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+      <div className="bg-white rounded-lg shadow-2xl w-[600px] p-6 relative animate-fade-in-down transform transition-all">
         
         {/* 헤더 영역 */}
         <div className="flex justify-between items-center mb-5 border-b pb-3">
           <div className="flex items-center gap-6">
-            <h2 className="text-xl font-bold text-gray-800">{isEditMode ? '일정 수정/삭제' : '새 일정 등록'}</h2>
+            <h2 className="text-xl font-bold text-gray-800">{isEditMode ? '일정 수정' : '새 일정 등록'}</h2>
             
             <div className="flex gap-4">
                 <label className="flex items-center gap-1.5 cursor-pointer select-none">
@@ -142,7 +156,15 @@ export default function EventModal({
                         onChange={handleTypeChange}
                     >
                         {CALENDAR_TYPES.map(type => (
-                            <option key={type.value} value={type.value}>{type.label}</option>
+                            <option 
+                                key={type.value} 
+                                value={type.value}
+                                // 🔥 [보안] 권한 없으면 전사 캘린더 선택 불가 (시각적 처리)
+                                disabled={type.value === '3' && authLevel < 3}
+                                className={type.value === '3' && authLevel < 3 ? 'text-gray-300' : ''}
+                            >
+                                {type.label} {type.value === '3' && authLevel < 3 ? '(권한 없음)' : ''}
+                            </option>
                         ))}
                     </select>
                 </div>
@@ -178,6 +200,7 @@ export default function EventModal({
                     onChange={handleChange}
                     className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-blue-500 text-lg font-semibold placeholder-gray-300"
                     placeholder="일정 제목을 입력하세요"
+                    autoFocus
                 />
             </div>
 
@@ -207,16 +230,15 @@ export default function EventModal({
             <div>
                 <label className="block text-xs font-bold mb-1 text-gray-500 uppercase tracking-wide">장소</label>
                 <div className="flex flex-col gap-2">
-                    {/* 회의실 선택 Dropdown */}
                     <select
                         className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-blue-500 bg-white"
                         value={isDirectLocation ? "direct" : values.location}
                         onChange={(e) => {
                             const val = e.target.value;
                             if (val === "direct") {
-                                setValues({ ...values, location: "" }); // 직접 입력 모드로 초기화
+                                setValues({ ...values, location: "" });
                             } else {
-                                setValues({ ...values, location: val }); // 선택한 회의실로 설정
+                                setValues({ ...values, location: val });
                             }
                         }}
                     >
@@ -226,7 +248,6 @@ export default function EventModal({
                         ))}
                     </select>
 
-                    {/* 직접 입력 Input (직접 입력 모드일 때만 보임 or 항상 보이게 할 수도 있음) */}
                     {isDirectLocation && (
                         <input 
                             type="text" 
@@ -235,7 +256,6 @@ export default function EventModal({
                             onChange={handleChange} 
                             className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-blue-500 animate-fade-in" 
                             placeholder="장소를 직접 입력하세요"
-                            autoFocus
                         />
                     )}
                 </div>
@@ -255,9 +275,9 @@ export default function EventModal({
 
             {/* 6. 버튼 영역 (삭제/저장) */}
             <div className="flex justify-between mt-4 pt-4 border-t">
-                {/* 왼쪽: 삭제 버튼 (수정 모드일 때만) */}
+                {/* 왼쪽: 삭제 버튼 (수정 모드 & 권한 있을 때만) */}
                 <div>
-                    {isEditMode && (
+                    {isEditMode && hasPermission && (
                         <button 
                             onClick={() => {
                                 if(window.confirm("정말 이 일정을 삭제하시겠습니까?")) onDelete();
@@ -274,7 +294,16 @@ export default function EventModal({
                     <button onClick={onClose} className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors font-medium">
                         취소
                     </button>
-                    <button onClick={onSave} className="px-5 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm font-bold">
+                    <button 
+                        onClick={onSave} 
+                        // 🔥 [보안] 권한 없으면 저장 버튼 비활성화
+                        disabled={!hasPermission}
+                        className={`px-5 py-2.5 text-white rounded-md shadow-sm font-bold transition-colors ${
+                            !hasPermission 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                    >
                         {isEditMode ? '수정 완료' : '일정 등록'}
                     </button>
                 </div>
