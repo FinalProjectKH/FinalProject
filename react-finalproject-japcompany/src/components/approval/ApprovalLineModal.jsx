@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FaTimes, FaUser, FaBuilding, FaArrowRight, FaTrash, FaChevronRight, FaChevronDown } from 'react-icons/fa'; // 아이콘 추가됨
+import { FaTimes, FaUser, FaBuilding, FaArrowRight, FaTrash, FaChevronRight, FaChevronDown } from 'react-icons/fa';
 
 export default function ApprovalLineModal({ isOpen, onClose, onConfirm, drafter }) {
   if (!isOpen) return null;
@@ -11,11 +11,12 @@ export default function ApprovalLineModal({ isOpen, onClose, onConfirm, drafter 
   const [approvalLine, setApprovalLine] = useState([]);   
   const [loading, setLoading] = useState(true);           
 
-  // 2. 모달 열릴 때 DB에서 조직도 가져오기
+  // 2. 모달 열릴 때 백엔드에서 데이터 가져오기 (팀원 API 활용)
   useEffect(() => {
     setLoading(true);
 
-    fetch("/org/orgTree", {
+    // 🔥 [핵심] 팀원이 만든 API 주소와 방식(POST)에 맞춤
+    fetch("/org/orgTree", { 
         method: "POST", 
         headers: { "Content-Type": "application/json" }
     })
@@ -24,7 +25,8 @@ export default function ApprovalLineModal({ isOpen, onClose, onConfirm, drafter 
         return res.json();
       })
       .then(flatData => {
-        const treeData = convertToTree(flatData);
+        // 받아온 평평한 리스트를 계층형 트리로 변환
+        const treeData = buildHierarchy(flatData);
         setOrgChart(treeData);
         setLoading(false);
       })
@@ -35,37 +37,68 @@ export default function ApprovalLineModal({ isOpen, onClose, onConfirm, drafter 
       });
   }, []);
 
-  // 리스트 -> 트리 변환 함수
-  const convertToTree = (list) => {
-    const deptMap = {}; 
-    list.forEach(emp => {
-      const deptName = emp.deptName || '부서미정';
-      
-      if (!deptMap[deptName]) {
-        deptMap[deptName] = {
-          id: `dept_${deptName}`, 
-          name: deptName,
+  // 🔥 [트리 변환 로직] LoginMemberDTO 리스트 -> 계층형 트리
+  const buildHierarchy = (flatList) => {
+    const deptMap = {};
+    const rootNodes = [];
+
+    // 1단계: 모든 부서를 Map에 등록 (중복 제거 및 구조 잡기)
+    flatList.forEach(row => {
+      // DTO 필드명 매핑 (본인 DB 컬럼명에 따라 수정 필요할 수 있음)
+      const dCode = row.deptCode; 
+      const dName = row.deptName || '부서미정';
+      const pCode = row.parentDeptCode || null; // 🚨 상위부서 코드가 있어야 트리가 됨
+
+      if (!dCode) return; 
+
+      if (!deptMap[dCode]) {
+        deptMap[dCode] = {
+          id: dCode,       
+          name: dName,     
+          parentId: pCode, 
           type: 'dept',
-          isOpen: false, // 🔥 [추가] 접기/펴기 상태 (기본값: false-접힘)
-          children: [] 
+          isOpen: true, // 기본적으로 펼침 상태        
+          children: [],          
+          members: []            
         };
       }
-      
-      deptMap[deptName].children.push({
-        id: String(emp.empNo),     
-        name: emp.empName,         
-        rank: emp.positionName,    
-        dept: deptName,            
-        type: 'user'
-      });
+
+      // 사원 정보가 있으면 해당 부서의 members에 추가
+      if (row.empNo) {
+        deptMap[dCode].members.push({
+          id: String(row.empNo),
+          name: row.empName,     
+          rank: row.positionName || row.jobName || '', // 직급
+          dept: dName,
+          type: 'user'
+        });
+      }
     });
-    return Object.values(deptMap);
+
+    // 2단계: 부모-자식 관계 연결
+    Object.values(deptMap).forEach(node => {
+      // 부모 부서가 존재하면 그 밑으로 들어감
+      if (node.parentId && deptMap[node.parentId]) {
+        deptMap[node.parentId].children.push(node);
+      } else {
+        // 부모가 없으면(NULL) 최상위 루트 노드 (본부/임원 등)
+        rootNodes.push(node);
+      }
+    });
+
+    // 3단계: 각 부서의 하위 요소로 [하위부서 + 사원] 합치기
+    Object.values(deptMap).forEach(node => {
+       // 사원들을 부서 리스트 뒤에 붙임
+       node.children = [...node.children, ...node.members];
+       delete node.members; // 메모리 정리
+    });
+
+    return rootNodes;
   };
 
-  // 🔥 [기능 1] 부서 접기/펴기 토글 함수
+  // 부서 접기/펴기 토글 함수
   const toggleDept = (deptId) => {
     setOrgChart(prevChart => {
-      // 재귀적으로 트리를 탐색하며 클릭한 부서의 isOpen을 뒤집음
       const toggleNode = (nodes) => {
         return nodes.map(node => {
           if (node.id === deptId) {
@@ -81,41 +114,35 @@ export default function ApprovalLineModal({ isOpen, onClose, onConfirm, drafter 
     });
   };
 
-  // 좌측 트리 선택 (클릭 시 하이라이트)
+  // 좌측 트리 아이템 선택
   const handleSelectNode = (node) => {
     setSelectedUser(node);
   };
 
-  // 🔥 [기능 2] 결재선 추가 로직 (param을 받도록 수정됨)
+  // 결재선 추가 로직
   const handleAddApprover = (targetNode = null) => {
-    // 1. 대상 선정: 더블클릭한 노드(targetNode)가 있으면 그걸 쓰고, 없으면 선택된(selectedUser) 노드 사용
     const target = targetNode || selectedUser;
 
     if (!target) return alert("추가할 사용자를 선택해주세요.");
     
-    // 2. 부서 선택 방지
-    if (target.type === 'dept') {
-      // 부서 더블클릭 시에는 그냥 펼치기/접기만 동작하도록 여기서 리턴하거나 경고
-      // 여기선 더블클릭으로 추가 안되게 막음
-      return; 
-    }
+    // 부서 자체는 추가 불가
+    if (target.type === 'dept') return; 
 
-    // 3. 본인 추가 방지
+    // 본인(기안자) 추가 방지
     if (drafter && String(target.id) === String(drafter.empNo)) {
       return alert("본인(기안자)은 결재선에 포함될 수 없습니다.");
     }
 
-    // 4. 인원 제한
+    // 인원 제한 (최대 3명)
     if (approvalLine.length >= 3) {
       return alert("결재자는 최대 3명까지만 지정 가능합니다.");
     }
 
-    // 5. 중복 방지
+    // 중복 방지
     if (approvalLine.find(line => line.id === target.id)) {
       return alert("이미 결재선에 존재하는 사용자입니다.");
     }
 
-    // 추가
     setApprovalLine([
       ...approvalLine, 
       { 
@@ -129,12 +156,12 @@ export default function ApprovalLineModal({ isOpen, onClose, onConfirm, drafter 
     ]);
   };
 
-  // 삭제 핸들러
+  // 결재자 삭제 핸들러
   const handleRemoveApprover = (id) => {
     setApprovalLine(approvalLine.filter(user => user.id !== id));
   };
 
-  // 적용하기
+  // 최종 적용
   const handleConfirm = () => {
     if (approvalLine.length === 0) {
       if(!window.confirm("결재선을 지정하지 않고 닫으시겠습니까?")) return;
@@ -143,7 +170,7 @@ export default function ApprovalLineModal({ isOpen, onClose, onConfirm, drafter 
     onClose(); 
   };
   
-  // 🔥 트리 렌더링 함수 (접기/펴기 + 더블클릭 적용)
+  // 재귀적 트리 렌더링 함수
   const renderTree = (nodes) => {
     return nodes.map((node) => (
        <div key={node.id} className="mb-1 ml-4 select-none">
@@ -152,13 +179,13 @@ export default function ApprovalLineModal({ isOpen, onClose, onConfirm, drafter 
           {node.type === 'dept' && (
              <div 
                onClick={() => {
-                   handleSelectNode(node); // 선택 하이라이트
-                   toggleDept(node.id);    // 🔥 클릭 시 펼치기/접기 토글
+                   handleSelectNode(node); 
+                   toggleDept(node.id);    
                }}
                className={`flex items-center gap-2 font-bold text-gray-700 mb-1 cursor-pointer p-1 rounded transition-colors
                  ${selectedUser?.id === node.id ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-50'}`}
              >
-                {/* 🔥 접힘/펼침 아이콘 표시 */}
+                {/* 접힘/펼침 아이콘 */}
                 {node.isOpen ? <FaChevronDown size={10} /> : <FaChevronRight size={10} />}
                 <FaBuilding className="text-blue-500"/> 
                 {node.name}
@@ -166,11 +193,10 @@ export default function ApprovalLineModal({ isOpen, onClose, onConfirm, drafter 
           )}
 
           {/* 2) 사원 노드 */}
-          {/* 🔥 부서가 열려있을 때만(node.isOpen === true) 렌더링 */}
           {node.type === 'user' && (
              <div 
                onClick={() => handleSelectNode(node)}
-               onDoubleClick={() => handleAddApprover(node)} // 🔥 [기능 2] 더블클릭 시 바로 추가!
+               onDoubleClick={() => handleAddApprover(node)} 
                className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm ml-6 
                  ${selectedUser?.id === node.id ? 'bg-blue-100 text-blue-700 font-bold' : 'hover:bg-gray-50'}`}
              >
@@ -179,7 +205,7 @@ export default function ApprovalLineModal({ isOpen, onClose, onConfirm, drafter 
              </div>
           )}
 
-          {/* 3) 자식 노드 재귀 (부서가 열려있어야 렌더링됨) */}
+          {/* 3) 자식 노드 재귀 렌더링 (부서가 열려있을 때만) */}
           {node.isOpen && node.children && node.children.length > 0 && (
              <div className="border-l-2 border-gray-200 ml-2 pl-2">
                 {renderTree(node.children)}
@@ -204,14 +230,18 @@ export default function ApprovalLineModal({ isOpen, onClose, onConfirm, drafter 
           <div className="flex-1 border border-gray-300 rounded flex flex-col">
             <div className="bg-gray-100 p-3 border-b font-bold text-sm text-center">조직도</div>
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-               {loading ? <div className="text-center text-gray-400 mt-10">로딩 중...</div> : (orgChart.length > 0 ? renderTree(orgChart) : <div className="text-center text-gray-400 mt-10">데이터 없음</div>)}
+               {loading ? (
+                 <div className="text-center text-gray-400 mt-10">로딩 중...</div>
+               ) : (
+                 orgChart.length > 0 ? renderTree(orgChart) : <div className="text-center text-gray-400 mt-10">데이터 없음</div>
+               )}
             </div>
           </div>
 
-          {/* 중앙: 버튼 */}
+          {/* 중앙: 추가 버튼 */}
           <div className="w-16 flex flex-col justify-center items-center gap-2">
             <button 
-                onClick={() => handleAddApprover()} // 그냥 클릭하면 selectedUser 사용
+                onClick={() => handleAddApprover()} 
                 className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-all shadow-md active:scale-95"
                 title="선택 추가"
             >
@@ -223,19 +253,33 @@ export default function ApprovalLineModal({ isOpen, onClose, onConfirm, drafter 
           <div className="flex-1 border border-gray-300 rounded flex flex-col">
              <div className="bg-gray-100 p-3 border-b font-bold text-sm text-center">지정된 결재 라인 (최대 3명)</div>
              <div className="flex-1 overflow-y-auto bg-gray-50 p-2 space-y-2 custom-scrollbar">
+                
+                {/* 기안자 정보 (고정) */}
                 <div className="bg-white p-3 border border-blue-200 rounded flex justify-between items-center shadow-sm opacity-80">
                    <div className="flex items-center gap-3">
                       <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded font-bold">기안</span>
-                      <div className="flex flex-col"><span className="text-sm font-bold text-gray-800">{drafter?.empName || '나'}</span><span className="text-xs text-gray-500">{drafter?.deptName || ''}</span></div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-gray-800">{drafter?.empName || '나'}</span>
+                        <span className="text-xs text-gray-500">{drafter?.deptName || ''}</span>
+                      </div>
                    </div>
                 </div>
+
+                {/* 선택된 결재자들 */}
                 {approvalLine.map((approver, index) => (
                    <div key={approver.id} className="bg-white p-3 border border-gray-300 rounded flex justify-between items-center shadow-sm">
                       <div className="flex items-center gap-3">
                          <span className="bg-gray-600 text-white text-xs px-2 py-1 rounded font-bold">결재 {index + 1}</span>
-                         <div className="flex flex-col"><span className="text-sm font-bold text-gray-800">{approver.name} <span className="text-xs font-normal text-gray-600">{approver.rank}</span></span><span className="text-xs text-gray-400">{approver.dept}</span></div>
+                         <div className="flex flex-col">
+                            <span className="text-sm font-bold text-gray-800">
+                                {approver.name} <span className="text-xs font-normal text-gray-600">{approver.rank}</span>
+                            </span>
+                            <span className="text-xs text-gray-400">{approver.dept}</span>
+                         </div>
                       </div>
-                      <button onClick={() => handleRemoveApprover(approver.id)} className="text-gray-400 hover:text-red-500 p-1"><FaTrash size={14}/></button>
+                      <button onClick={() => handleRemoveApprover(approver.id)} className="text-gray-400 hover:text-red-500 p-1">
+                        <FaTrash size={14}/>
+                      </button>
                    </div>
                 ))}
              </div>

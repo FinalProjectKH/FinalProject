@@ -42,7 +42,7 @@ public class CalendarServiceImpl implements CalendarService {
                 .startDate(dto.getCalStartDt())
                 .endDate(dto.getCalEndDt())
                 .location(dto.getCalLocation())
-                .calCategory(categoryEntity) // 연관관계 설정
+                .calCategory(categoryEntity) 
                 .typeId(categoryEntity.getType()) // Entity에 필드가 없다면 주석 처리
                 .alldayYn(dto.getAlldayYn())
                 .openYn(dto.getOpenYn())
