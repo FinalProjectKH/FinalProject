@@ -1,10 +1,12 @@
 package com.example.demo.attendance.controller;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,20 +16,28 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.attendance.model.dto.AttendanceDTO;
+import com.example.demo.attendance.model.dto.AttendanceDept;
 import com.example.demo.attendance.model.entity.Attendance;
-import com.example.demo.attendance.model.service.AttendanceServiceImpl;
+import com.example.demo.attendance.model.entity.LeaveHistory;
+import com.example.demo.attendance.model.service.AttendanceService;
+import com.example.demo.common.config.auth.PrincipalDetails;
 import com.example.demo.common.utility.CommonUtils;
+import com.example.demo.employee.model.dto.LoginMemberDTO;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/attendance")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:5173")
+@Slf4j
 public class AttendanceController {
 	
-	private final AttendanceServiceImpl attendanceService;
+	private final AttendanceService attendanceService;
 	
 	// 출근 처리 컨트롤러
 	@PostMapping("/check-in")
@@ -58,7 +68,7 @@ public class AttendanceController {
 	        
 	        // 5. 최신 주간 목록 조회 (React 화면 업데이트를 위한 데이터 반환)
 	        // 이번 주 월요일 기준 목록 반환 (startDate를 null로 보내면 서비스에서 자동 계산)
-	        List<Attendance> updateList = attendanceService.getWeeklyAttendance(empNo, null);
+	        List<AttendanceDTO> updateList = attendanceService.getWeeklyAttendance(empNo, null);
 	        
 	        // 성공 시 200 OK와 함께 리스트 반환
 	        return ResponseEntity.ok(updateList);
@@ -95,12 +105,92 @@ public class AttendanceController {
 	
 	// 주간 리스트 목록 컨트롤러
 	@GetMapping("/weekly/{empNo}")
-	public ResponseEntity<List<Attendance>> getWeeklyAttendance
+	public ResponseEntity<List<AttendanceDTO>> getWeeklyAttendance
 										(@PathVariable("empNo") String empNo,
 										@RequestParam(name = "startDate", required = false) String startDate) {
 		
-		List<Attendance> list = attendanceService.getWeeklyAttendance(empNo, startDate);
+		List<AttendanceDTO> list = attendanceService.getWeeklyAttendance(empNo, startDate);
 		
 		return ResponseEntity.ok(list);
+	}
+	
+	// 부서 근태 관리 권한 체크
+	@GetMapping("/department/{deptCode}")
+	public ResponseEntity<?> getDeptAttendance(
+	        @PathVariable("deptCode") String deptCode,
+	        @RequestParam("date") String date,
+	        @AuthenticationPrincipal PrincipalDetails principal) {
+
+	    // 1. 세션 체크: 사용자가 누군지 식별 가능한지 확인
+	    if (principal == null || principal.getEmployee() == null) {
+	        log.warn("[근태관리] 미인증 사용자의 접근 시도 - 부서: {}", deptCode);
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("세션이 만료되었습니다. 다시 로그인해주세요.");
+	    }
+
+	    // 💡 [추가] 상세 권한 로그: 여기서 '2'가 제대로 찍히는지 확인하는 게 핵심!
+	    Integer currentLevel = principal.getEmployee().getAuthorityLevel();
+	    String currentEmp = principal.getEmployee().getEmpName();
+	    
+	    log.info("[권한 검사] 요청자: {}({}), 보유레벨: {}, 필요레벨: 2", 
+	             currentEmp, principal.getUsername(), currentLevel);
+
+	    // 2. 권한 체크: 팀장(2) 이상만 허용
+	    // 💡 Integer 비교 시 발생할 수 있는 오류를 방지하기 위해 null 체크와 정확한 비교 수행
+	    if (currentLevel == null || currentLevel < 2) {
+	        log.error("[권한 부족] 사용자 {}의 레벨({})이 낮아 접근이 거부됨", currentEmp, currentLevel);
+	        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("부서 근태 조회 권한이 없습니다.");
+	    }
+
+	    try {
+	        log.info("[근태관리] 조회 승인 - 부서: {}, 일자: {}, 요청자: {}", 
+	                 deptCode, date, currentEmp);
+	        
+	        List<AttendanceDept> list = attendanceService.getDeptAttendanceList(deptCode, date);
+	        
+	        // 💡 [추가] 데이터 존재 여부 로그
+	        log.info("[조회 결과] 데이터 건수: {}건", list != null ? list.size() : 0);
+	        
+	        return ResponseEntity.ok(list);
+	        
+	    } catch (Exception e) {
+	        log.error("[근태관리] 서버 내부 오류 발생 - 사유: {}", e.getMessage(), e);
+	        return ResponseEntity.internalServerError().body("데이터 조회 중 시스템 오류가 발생했습니다.");
+	    }
+	}
+	
+	// 나의 남은 휴가 확인 ( 개인 )
+	@GetMapping("/leave-info")
+    public ResponseEntity<?> getLeaveInfo(HttpSession session) {
+        LoginMemberDTO loginMember = (LoginMemberDTO) session.getAttribute("loginMember");
+        if (loginMember == null) return ResponseEntity.status(401).build();
+
+        double remainingLeave = attendanceService.getRemainingLeave(loginMember.getEmpNo());
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("remainingLeave", remainingLeave);
+        return ResponseEntity.ok(result);
+    }
+	
+	// 우리 부서 오늘 휴가자 수 ( 통계 )
+	@GetMapping("/dept-leave-count")
+	public ResponseEntity<Integer> getDeptLeaveCount(@RequestParam String deptCode) {
+	    return ResponseEntity.ok(attendanceService.getTodayLeaveCount(deptCode));
+	}
+	
+	// 부서원 휴가 내역 관리 ( 관리 )
+	@GetMapping("/dept-leaves")
+	public ResponseEntity<?> getDeptLeaves(HttpSession session) {
+	    LoginMemberDTO loginMember = (LoginMemberDTO) session.getAttribute("loginMember");
+	    
+	    // 💡 여기서도 방어 코드! 로그인 안 했으면 입구 컷
+	    if (loginMember == null) return ResponseEntity.status(401).build();
+
+	    // 박지성 과장의 부서 코드와 권한 레벨을 넘겨서 부서원들 기록 조회
+	    List<LeaveHistory> list = attendanceService.getDeptLeaveHistory(
+	        loginMember.getDeptCode(), 
+	        loginMember.getAuthorityLevel()
+	    );
+	    
+	    return ResponseEntity.ok(list);
 	}
 }

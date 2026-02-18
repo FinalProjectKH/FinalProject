@@ -142,8 +142,10 @@ const AttendanceWeeklyList = ({ onPrevWeek, onNextWeek }) => {
               </span>
             )}
             <div className="bg-slate-100 text-slate-600 px-4 py-1 rounded-full text-xs font-bold border border-slate-200">
-              {/* records[selectedDay]?.in 이 '-' 가 아니면 '기록 있음', 아니면 '기록 없음' 등으로 표시 가능 */}
-              {records[selectedDay]?.in !== '-' ? "기록 확인됨" : "기록 없음"}
+              {/* 1. 데이터가 존재하고  2. 출근 시간(in)이 '-'가 아닐 때만 '기록 확인됨' 표시 */}
+              {records[selectedDay] && records[selectedDay].in !== '-'
+                ? "기록 확인됨"
+                : "기록 없음"}
             </div>
           </div>
         </div>
