@@ -13,12 +13,13 @@ import com.example.demo.employee.model.dto.Employee;
 import com.example.demo.employee.model.dto.LoginMemberDTO;
 import com.example.demo.employee.model.service.EmployeeService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
 //@SessionAttributes({"loginMember"})
 @RestController
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+//@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 @RequestMapping("employee")
 @RequiredArgsConstructor
 public class EmployeeController {
@@ -26,12 +27,16 @@ public class EmployeeController {
 	private final EmployeeService service;
 	
 	@PostMapping("login")
-	public LoginMemberDTO login(@RequestBody Employee inputMember, HttpSession session) {
+	// 시큐리티 사용을 위해 현재의 로그인 로직을 유지하려면, 
+	// 세션을 강제로 생성해서 브라우저에 주입
+	public LoginMemberDTO login(@RequestBody Employee inputMember, HttpServletRequest request) { 
 		
 		LoginMemberDTO  loginMember = service.login(inputMember);
 		
 		if(loginMember == null) return null;
 		
+		// 세션을 강제로 생성하고 시큐리티 컨텍스트에 등록될 수 있게 함
+		HttpSession session = request.getSession(true);
         session.setAttribute("loginMember", loginMember);
         
 		return loginMember;

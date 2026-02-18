@@ -53,3 +53,8 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// build.gradle 파일 하단에 추가
+tasks.withType(JavaCompile) {
+    options.compilerArgs << '-parameters'
+}
