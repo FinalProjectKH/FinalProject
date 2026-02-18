@@ -46,7 +46,7 @@ export default function Main() {
           {/* 근태 */}
           <Card
             title="근태"
-            className="h-[220px]"
+            className="h-[220px] bg-[#f6f2ed]/60 border-[#e5ddd5]/30 shadow-md shadow-black/5"
             right={
               <span className="inline-flex items-center gap-2 text-black/50">
                 <Clock size={14} className="text-black/35" />
@@ -131,7 +131,8 @@ export default function Main() {
 
 
           {/* 최근 메시지 */}
-          <Card title="최근 메시지">
+          <Card title="최근 메시지"
+                className="bg-[#f6f2ed]/60 border-[#e5ddd5]/30 shadow-md shadow-black/5">
             <div className="rounded-2xl bg-white/20 border border-white/25 p-4 flex gap-4 items-center">
               <div className="h-12 w-12 rounded-full bg-black/10 border border-white/20" />
               <div className="min-w-0 flex-1">
