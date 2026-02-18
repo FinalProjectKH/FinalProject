@@ -1,11 +1,11 @@
 import React from "react";
-import axios from "axios";
 import { useAuthStore } from "../../../store/authStore";
 import Header from "../Header";
 import AttendanceMain from "./AttendanceMain";
 import RightSidebar from "./RightSidebar";
 import Sidebar from "../Sidebar";
 import { Outlet } from "react-router-dom";
+import { axiosApi } from "../../../api/axiosAPI";
 
 const AttendanceLayout = () => {
   const { user, triggerRefresh } = useAuthStore();
@@ -17,9 +17,10 @@ const AttendanceLayout = () => {
     try {
 
       // 1. 백엔드 호출
-      const response = await axios.post('/api/attendance/check-in', {
-        empNo: user.empNo,
-      });
+      const response = await axiosApi.post('/api/attendance/check-in', 
+        { empNo: user.empNo }, // 2번째: 보낼 데이터 (body)
+        { withCredentials: true } // 3번째: 설정값 (신분증 지참)
+      );
 
       // 2. 성공 시 처리 (200 OK)
       if (response.status === 200) {
@@ -74,7 +75,7 @@ const AttendanceLayout = () => {
 
     try {
       // 퇴근도 JSON 객체 형식으로 보내는 것이 서버(Spring)에서 받기 편해!
-      const response = await axios.post('/api/attendance/check-out', {
+      const response = await axiosApi.post('/api/attendance/check-out', {
         empNo: user.empNo
       });
 

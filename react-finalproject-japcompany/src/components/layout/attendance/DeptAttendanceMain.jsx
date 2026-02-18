@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useContext } from 'react';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import { useAuthStore } from "../../../store/authStore";
 import { useNavigate } from 'react-router-dom';
+import { axiosApi } from '../../../api/axiosAPI';
+import { useAuthStore } from "../../../store/authStore";
 
 const StatusCard = ({ label, count, percentage, total, color }) => (
   <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-2 min-w-[140px]">
@@ -16,39 +16,53 @@ const StatusCard = ({ label, count, percentage, total, color }) => (
   </div>
 );
 
-const AttendanceDept = () => {
+const DeptAttendanceMain = () => {
   const { user } = useAuthStore();
-  const navigate = useNavigate(); // 💡 1. useNavigate 훅을 추가해야 해! (import도 잊지 말고)
+  const navigate = useNavigate();
   const [attendanceList, setAttendanceList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deptLeaveList, setDeptLeaveList] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // 💡 2. 권한 체크 로직 추가
+  // 💡 권한 체크 로직
   useEffect(() => {
-  // 💡 user 정보가 완전히 들어왔을 때만 체크하도록 조건 강화
-  if (user && user.empNo) {
-    const userRole = Number(user.authorityLevel); // 숫자로 변환
-    console.log("검증 중인 권한 레벨:", userRole);
-
-    if (userRole < 2) {
-      alert("팀장 이상의 권한이 필요합니다.");
-      navigate("/attendance/my");
+    if (user && user.empNo) {
+      const userRole = Number(user.authorityLevel);
+      if (userRole < 2) {
+        alert("팀장 이상의 권한이 필요합니다.");
+        navigate("/attendance/my");
+      }
     }
-  }
-}, [user, navigate]);
+  }, [user, navigate]);
 
-  // 1. 데이터 페칭 함수
   const fetchDeptAttendance = async () => {
-    if (!user?.deptId) return;
+    // 💡 1. 모든 입구 컷 조건을 한 줄로 정리!
+    // 유저가 없거나, 사번이 없거나, 사번이 빈 문자열이면 즉시 중단
+    if (!user || !user.empNo || user.empNo === '') {
+        console.warn("방어 코드 작동: 유저 정보가 불완전하여 요청을 중단함");
+        return;
+    }
+
+    // 💡 2. 여기 도달했다는 건 유저 정보가 확실히 있다는 뜻!
+    console.log("현재 스토어의 유저 정보:", user);
+
     try {
       setLoading(true);
-      const response = await axios.get(`/api/attendance/department/${user.deptId}`, {
-        params: { date: currentDate }
-      });
-      // 백엔드에서 DTO 리스트를 바로 보내준다고 가정
-      setAttendanceList(response.data || []);
+      console.log("API 요청 시도 - 부서코드:", user.deptCode);
+      
+      const [attendanceRes, leaveRes] = await Promise.all([
+        axiosApi.get(`/api/attendance/department/${user.deptCode}`, {
+          params: { date: currentDate }
+        }),
+        axiosApi.get('/api/attendance/dept-leaves')
+      ]);
+      
+      console.log("응답 성공!", attendanceRes.data);
+      setAttendanceList(attendanceRes.data || []);
+      setDeptLeaveList(leaveRes.data || []);
     } catch (error) {
-      console.error("부서 근태 조회 실패:", error);
+      // 💡 2. 에러가 나면 응답 객체 전체를 확인
+      console.error("에러 상세 내역:", error.response);
     } finally {
       setLoading(false);
     }
@@ -56,15 +70,20 @@ const AttendanceDept = () => {
 
   useEffect(() => {
     fetchDeptAttendance();
-  }, [currentDate, user?.deptId]);
+  }, [currentDate, user]);
 
-  // 2. 실시간 통계 계산 (Render 시점에 계산)
   const stats = {
-    normal: attendanceList.filter(i => !i.isLate && !i.isEarlyLeave && !i.isMissing && i.checkInTime).length,
-    late: attendanceList.filter(i => i.isLate).length,
-    early: attendanceList.filter(i => i.isEarlyLeave).length,
-    missing: attendanceList.filter(i => i.isMissing).length,
-    abnormal: attendanceList.filter(i => i.isAbnormal).length, // 혹시 몰라 남겨둔 비정상 체크
+    normal: attendanceList.filter(i => i.startTime && i.startTime !== "-" && !i.late && !i.earlyLeave && !i.missing).length,
+    late: attendanceList.filter(i => i.late).length,
+    early: attendanceList.filter(i => i.earlyLeave).length,
+    missing: attendanceList.filter(i => i.missing).length,
+    abnormal: 0,
+  };
+
+  const handleDateChange = (days) => {
+    const date = new Date(currentDate);
+    date.setDate(date.getDate() + days);
+    setCurrentDate(date.toISOString().split('T')[0]);
   };
 
   const totalMember = attendanceList.length || 0;
@@ -72,15 +91,15 @@ const AttendanceDept = () => {
 
   return (
     <div className="p-6 space-y-8">
-      {/* 상단 섹션: 대시보드 */}
+      {/* 상단 대시보드 */}
       <div className="bg-[#fdfbf7] p-8 rounded-3xl shadow-sm border border-gray-100">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">부서 근태관리</h2>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-inner border">
-              <ChevronLeft className="w-5 h-5 cursor-pointer" onClick={() => {/* 날짜 변경 로직 */ }} />
+              <ChevronLeft className="w-5 h-5 cursor-pointer" onClick={() => handleDateChange(-1)} />
               <span className="font-semibold">{currentDate}</span>
-              <ChevronRight className="w-5 h-5 cursor-pointer" onClick={() => {/* 날짜 변경 로직 */ }} />
+              <ChevronRight className="w-5 h-5 cursor-pointer" onClick={() => handleDateChange(1)} />
             </div>
             <button className="text-gray-500 text-sm font-medium hover:text-[#5b2f1f]" onClick={() => setCurrentDate(new Date().toISOString().split('T')[0])}>오늘</button>
           </div>
@@ -88,27 +107,21 @@ const AttendanceDept = () => {
 
         <div className="flex gap-6 overflow-x-auto pb-2">
           <div className="flex flex-col gap-4 p-4 bg-gray-50/50 rounded-2xl border border-dashed">
-            <div className="flex items-center gap-1 text-xs text-gray-400 mb-1"><span>📝 근무 상태</span></div>
+            <div className="text-xs text-gray-400 mb-1">📝 근무 상태</div>
             <StatusCard label="정상" count={stats.normal} percentage={getPercent(stats.normal)} total={totalMember} color="bg-green-100 text-green-600" />
           </div>
-
           <div className="flex flex-col gap-4 p-4 bg-gray-50/50 rounded-2xl border border-dashed flex-1">
-            <div className="flex items-center gap-1 text-xs text-gray-400 mb-1"><span>⏰ 시간 및 기록 이상</span></div>
+            <div className="text-xs text-gray-400 mb-1">⏰ 시간 및 기록 이상</div>
             <div className="grid grid-cols-3 gap-4">
               <StatusCard label="지각" count={stats.late} percentage={getPercent(stats.late)} total={totalMember} color="bg-orange-100 text-orange-600" />
               <StatusCard label="조퇴" count={stats.early} percentage={getPercent(stats.early)} total={totalMember} color="bg-orange-100 text-orange-600" />
               <StatusCard label="출퇴근 누락" count={stats.missing} percentage={getPercent(stats.missing)} total={totalMember} color="bg-orange-100 text-orange-600" />
             </div>
           </div>
-
-          <div className="flex flex-col gap-4 p-4 bg-gray-50/50 rounded-2xl border border-dashed">
-            <div className="flex items-center gap-1 text-xs text-gray-400 mb-1"><span>⚠️ 비정상적 근무 상태</span></div>
-            <StatusCard label="근무지 외 체크" count={stats.abnormal} percentage={getPercent(stats.abnormal)} total={totalMember} color="bg-red-100 text-red-600" />
-          </div>
         </div>
       </div>
 
-      {/* 하단 섹션: 리스트 테이블 */}
+      {/* 테이블 리스트 */}
       <div className="bg-[#fdfbf7] p-8 rounded-3xl shadow-sm border border-gray-100">
         <div className="relative mb-6 w-72">
           <input type="text" placeholder="검색" className="w-full pl-10 pr-4 py-2 bg-gray-200/50 border-none rounded-full outline-none" />
@@ -122,7 +135,6 @@ const AttendanceDept = () => {
                 <th className="pb-4 font-medium">사번</th>
                 <th className="pb-4 font-medium">사원명</th>
                 <th className="pb-4 font-medium">부서명</th>
-                <th className="pb-4 font-medium">근무그룹명</th>
                 <th className="pb-4 font-medium">출근시간</th>
                 <th className="pb-4 font-medium">퇴근시간</th>
                 <th className="pb-4 font-medium">총 근무 시간</th>
@@ -132,13 +144,16 @@ const AttendanceDept = () => {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan="9" className="py-20 text-gray-400">데이터를 불러오는 중입니다...</td></tr>
+                <tr><td colSpan="8" className="py-20 text-gray-400">데이터를 불러오는 중입니다...</td></tr>
               ) : attendanceList.length > 0 ? (
                 attendanceList.map((item) => {
+                  // 💡 여기서 휴가 데이터를 매칭해야 에러가 안 나!
+                  const empLeave = deptLeaveList.find(l => l.employee?.empNo === item.empNo);
+                  
                   const statusMessages = [];
-                  if (item.isLate) statusMessages.push("지각");
-                  if (item.isEarlyLeave) statusMessages.push("조퇴");
-                  if (item.isMissing) statusMessages.push("누락");
+                  if (item.late) statusMessages.push("지각");
+                  if (item.earlyLeave) statusMessages.push("조퇴");
+                  if (item.missing) statusMessages.push("누락");
                   const statusText = statusMessages.length > 0 ? statusMessages.join(", ") : "정상";
 
                   return (
@@ -146,11 +161,10 @@ const AttendanceDept = () => {
                       <td className="py-4 text-gray-400">{item.empNo}</td>
                       <td className="py-4 font-medium">{item.empName}</td>
                       <td className="py-4 text-gray-600">{item.deptName}</td>
-                      <td className="py-4 text-gray-600">{item.groupName || '기본근무'}</td>
-                      <td className="py-4 font-semibold text-gray-700">{item.checkInTime || '-'}</td>
-                      <td className="py-4 font-semibold text-gray-700">{item.checkOutTime || '-'}</td>
+                      <td className="py-4 font-semibold text-gray-700">{item.startTime || '-'}</td>
+                      <td className="py-4 font-semibold text-gray-700">{item.endTime || '-'}</td>
                       <td className="py-4 text-gray-700">{item.totalWorkTime || '0h 0m'}</td>
-                      <td className="py-4 text-gray-600">{item.leaveHours || '-'}</td>
+                      <td className="py-4 text-gray-600">{empLeave ? `${empLeave.leaveDays}일` : '-'}</td>
                       <td className="py-4">
                         <span className={`font-bold ${statusMessages.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
                           {statusText}
@@ -160,7 +174,7 @@ const AttendanceDept = () => {
                   );
                 })
               ) : (
-                <tr><td colSpan="9" className="py-20 text-gray-400">조회된 근태 기록이 없습니다.</td></tr>
+                <tr><td colSpan="8" className="py-20 text-gray-400">조회된 근태 기록이 없습니다.</td></tr>
               )}
             </tbody>
           </table>
@@ -170,4 +184,4 @@ const AttendanceDept = () => {
   );
 };
 
-export default AttendanceDept;
+export default DeptAttendanceMain;

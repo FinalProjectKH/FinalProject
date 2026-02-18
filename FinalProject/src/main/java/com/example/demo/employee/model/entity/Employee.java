@@ -1,8 +1,12 @@
 package com.example.demo.employee.model.entity;
 
+import java.time.LocalDate;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,6 +36,10 @@ public class Employee {
 
     @Column(name = "DEPT_CODE")
     private String deptCode;
+    
+//    @ManyToOne // 사원(Many)은 하나의 부서(One)에 속한다.
+//    @JoinColumn(name = "DEPT_CODE", insertable = false, updatable = false)
+//    private Department department;
 
     @Column(name = "POSITION_CODE")
     private String positionCode;
@@ -46,7 +54,7 @@ public class Employee {
     private String empPhone;
 
     @Column(name = "ENROLL_DATE")
-    private String enrollDate;
+    private LocalDate enrollDate;
 
     @Column(name = "EMP_DEL_FL")
     private String empDelFl;
@@ -58,8 +66,12 @@ public class Employee {
     private String profileImg;
 
     @Column(name = "AUTHORITY_LEVEL")
-    private int authorityLevel; // 주영님 요청 필드
-
+    private Integer authorityLevel;
+    
     @Column(name = "OWNER_EMP_NO")
     private String ownerEmpNo;
+    
+    @Builder.Default
+    @Column(name = "TOTAL_LEAVE") // DB 컬럼명과 매칭 (없으면 자동 생성)
+    private Double totalLeave = 15.0; // 기본값 15일 설정
 }
