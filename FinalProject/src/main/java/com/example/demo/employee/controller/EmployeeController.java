@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.employee.model.dto.Employee;
@@ -26,6 +27,18 @@ public class EmployeeController {
 	
 	private final EmployeeService service;
 	
+	public record ChangePasswordRequest(
+	        String currentPassword,
+	        String newPassword
+	) {}
+	
+	public enum ChangePwResult {
+		  SUCCESS,          // 변경 성공
+		  WRONG_CURRENT_PW, // 현재 비번 불일치
+		  SAME_AS_OLD,      // 새 비번이 기존과 동일(선택)
+		  UPDATE_FAILED     // DB 업데이트 실패(0 row 등)
+		}
+
 	@PostMapping("login")
 	// 시큐리티 사용을 위해 현재의 로그인 로직을 유지하려면, 
 	// 세션을 강제로 생성해서 브라우저에 주입
@@ -77,5 +90,22 @@ public class EmployeeController {
         
         return ResponseEntity.ok(loginMember);
     }
+	
+	@PostMapping("change-password")
+	public ResponseEntity<Void> changePassword(@RequestBody ChangePasswordRequest request, HttpSession session){
+		LoginMemberDTO loginMember = (LoginMemberDTO) session.getAttribute("loginMember");
+		if (loginMember == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		
+		if(request == null) return ResponseEntity.badRequest().build();
+		
+		ChangePwResult result = service.changePasswordRequest(loginMember.getEmpNo(),request);
+		
+	    return switch (result) {
+        case SUCCESS -> ResponseEntity.ok().build();
+        case WRONG_CURRENT_PW -> ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        case SAME_AS_OLD -> ResponseEntity.status(HttpStatus.CONFLICT).build();      // 409 (선택)
+        case UPDATE_FAILED -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // 500
+	    };
+	}
 	
 }
