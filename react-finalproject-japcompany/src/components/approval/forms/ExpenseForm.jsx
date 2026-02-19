@@ -159,17 +159,15 @@ export default function ExpenseForm({ data, onChange, approvalLines = [], loginM
             </td>
           </tr>
           <tr>
-            <td style={styles.headerLabel}>작성일자</td>
-            {/* 🔥 작성일자도 readOnly 적용 */}
-            <td style={styles.inputCell}><input type="date" name="expenseDate" value={data.expenseDate || ''} onChange={onChange} disabled={readOnly} style={styles.input} /></td>
             <td style={styles.headerLabel}>소 속</td>
             <td style={styles.inputCell}>{loginMember?.deptName}</td>
-          </tr>
-          <tr>
+            
             <td style={styles.headerLabel}>작 성 자</td>
             <td style={styles.inputCell}>{loginMember?.empName}</td>
+          </tr>
+          <tr>
             <td style={styles.headerLabel}>금 액</td>
-            <td style={{ ...styles.inputCell, textAlign: "right", fontWeight: "bold" }}>{formatCurrency(totalAmount)} 원</td>
+            <td colSpan={3} style={{ ...styles.inputCell, textAlign: "right", fontWeight: "bold" }}>{formatCurrency(totalAmount)} 원</td>
           </tr>
           <tr>
             <td style={{ ...styles.headerLabel, height: "60px" }}>지출사유</td>

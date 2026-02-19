@@ -12,6 +12,7 @@ import com.example.demo.calendar.model.entity.CalendarCategoryEntity;
 import com.example.demo.calendar.model.entity.CalendarEntity;
 import com.example.demo.calendar.model.repository.CalendarCategoryRepository;
 import com.example.demo.calendar.model.repository.CalendarRepository;
+import com.example.demo.employee.model.dto.Employee;
 import com.example.demo.employee.model.dto.LoginMemberDTO;
 import com.example.demo.employee.model.mapper.EmployeeMapper;
 
@@ -155,6 +156,8 @@ public class CalendarServiceImpl implements CalendarService {
         }
     }
 
+
+    
     // ==========================================
     // 2. 카테고리(Category) 관련 (기존 코드 유지)
     // ==========================================
