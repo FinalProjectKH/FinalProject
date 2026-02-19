@@ -114,6 +114,31 @@
   FROM EMPLOYEE
   WHERE EMP_ID = #{empId}
 	</select>
-
+	
+	<update id="updateEmployee">
+	UPDATE "EMPLOYEE"
+   	<set>
+   	<if test="req.empName != null">EMP_NAME = #{req.empName, jdbcType=VARCHAR},</if>
+   	<if test="req.empId != null">EMP_ID = #{req.empId, jdbcType=VARCHAR},</if>
+   	<if test="req.deptCode != null">DEPT_CODE = #{req.deptCode, jdbcType=VARCHAR},</if>
+   	<if test="req.positionCode != null">POSITION_CODE = #{req.positionCode, jdbcType=VARCHAR}</if>
+   	</set>
+    WHERE EMP_NO = #{req.empNo}
+	</update>
+	
+	<update id="empResigned">
+	UPDATE "EMPLOYEE"
+	SET EMP_DEL_FL = 'Y'
+	WHERE EMP_NO = #{empNo}
+	AND EMP_DEL_FL = 'N'
+	</update>
+	
+	<update id="empReturn">
+	UPDATE "EMPLOYEE"
+	SET EMP_DEL_FL = 'N'
+	WHERE EMP_NO = #{empNo}
+	AND EMP_DEL_FL = 'Y'
+	</update>
+	
    
 </mapper>

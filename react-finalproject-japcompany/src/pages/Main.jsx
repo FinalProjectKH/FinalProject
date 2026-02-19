@@ -1,136 +1,198 @@
-// pages/Main.jsx
-import { useState } from "react";
-import { CenterModal } from "../components/modal";
+// src/pages/Main.jsx
+import { useEffect, useMemo, useState } from "react";
+import { Clock, LogIn, LogOut, Heart, MessageCircle, Cloud } from "lucide-react";
 
-const Main = () => {
-  const [openModal, setOpenModal] = useState(false);
+const Card = ({ title, right, children, className = "" }) => (
+  <section className={`rounded-2xl border border-white/20 p-5 ${className}`}>
+    <div className="flex items-center justify-between mb-3">
+      <div className="text-[13px] font-semibold text-black/75">{title}</div>
+      {right ? <div className="text-[12px] text-black/55">{right}</div> : <div />}
+    </div>
+    {children}
+  </section>
+);
+
+export default function Main() {
+  const [now, setNow] = useState(() => new Date());
+  const [selectedDate, setSelectedDate] = useState(9);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const timeText = useMemo(() => {
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const ss = String(now.getSeconds()).padStart(2, "0");
+    return `${hh}:${mm}:${ss}`;
+  }, [now]);
+
+  const dateText = useMemo(() => {
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, [now]);
+
+  const days = useMemo(() => Array.from({ length: 30 }, (_, i) => i + 1), []);
 
   return (
-    <>
-      {/* 전체 메인 레이아웃: 좌(큰 카드) + 우(큰 카드) */}
-      <div className="grid grid-cols-12 gap-10">
-        {/* LEFT BIG CARD */}
-        <section
-          onClick={() => setOpenModal(true)}
-          className="
-            col-span-8 h-[520px]
-            rounded-[34px]
-            bg-gradient-to-br from-[#5a3827] to-[#7a4a33]
-            shadow-[0_35px_80px_rgba(0,0,0,0.25)]
-            border border-white/10
-            cursor-pointer
-            relative
-            overflow-hidden
-          "
-        >
-          {/* 은은한 광원(글래스 느낌) */}
-          <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-28 -right-28 h-80 w-80 rounded-full bg-black/10 blur-3xl" />
+    <div className="py-6">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
+        {/* 중앙 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 ">
+          <div className="flex flex-col gap-6">
+          {/* 근태 */}
+          <Card
+            title="근태"
+            className="h-[220px] bg-[#f6f2ed]/60 border-[#e5ddd5]/30 shadow-md shadow-black/10"
+            right={
+              <span className="inline-flex items-center gap-2 text-black/50">
+                <Clock size={14} className="text-black/35" />
+                {dateText}
+              </span>
+            }
+          >
+            <div className="rounded-2xl bg-white/20 border border-white/25 p-4 shadow-md shadow-black/5">
+              <div className="text-[22px] font-semibold text-black/80">{timeText}</div>
+              <div className="text-[12px] text-black/50 mt-1">오늘 근무: 00:00:00</div>
 
-          <div className="p-10 h-full flex items-start gap-10">
-            {/* 캘린더 박스 (화이트 카드) */}
-            <div className="w-[360px] rounded-3xl bg-white/92 shadow-[0_10px_30px_rgba(0,0,0,0.18)] p-6">
-              {/* 상단 컨트롤(월/년도/화살표) - 실제 캘린더 라이브러리 붙이기 전 더미 */}
-              <div className="flex items-center justify-between mb-4">
-                <button className="h-9 w-9 rounded-full bg-black/5 hover:bg-black/10" />
-                <div className="flex gap-3">
-                  <div className="h-9 w-24 rounded-lg bg-black/5" />
-                  <div className="h-9 w-20 rounded-lg bg-black/5" />
+              <div className="mt-4 flex gap-3">
+                <button 
+                className="flex-1 rounded-xl px-4 py-2 text-[13px] 
+                bg-[#6b3f2a]/90 text-white 
+                flex items-center justify-center gap-2 
+                shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-3px_6px_rgba(0,0,0,0.25),0_10px_22px_rgba(0,0,0,0.12)]
+                hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-3px_7px_rgba(0,0,0,0.28),0_12px_26px_rgba(0,0,0,0.16)]
+                active:shadow-[inset_0_3px_8px_rgba(0,0,0,0.35),inset_0_-1px_2px_rgba(255,255,255,0.10)]
+                active:translate-y-[1px]
+                transition">
+                  <LogIn size={16} />
+                  출근
+                </button>
+                <button 
+                className="flex-1 rounded-xl px-4 py-2 text-[13px]
+                bg-[#c27a4a]/90 text-white 
+                flex items-center justify-center gap-2
+                shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-3px_6px_rgba(0,0,0,0.25),0_10px_22px_rgba(0,0,0,0.12)]
+                hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-3px_7px_rgba(0,0,0,0.28),0_12px_26px_rgba(0,0,0,0.16)]
+                active:shadow-[inset_0_3px_8px_rgba(0,0,0,0.35),inset_0_-1px_2px_rgba(255,255,255,0.10)]
+                active:translate-y-[1px]
+                transition">
+                  <LogOut size={16} />
+                  퇴근
+                </button>
+              </div>
+            </div>
+          </Card>
+
+                    {/* 공지/피드 */}
+          <Card title="공지 / 피드"
+          className="bg-[#f6f2ed]/60 border-[#e5ddd5]/30 backdrop-blur p-5 shadow-md shadow-black/10">
+            <div className="rounded-2xl bg-white/20 border border-white/25 p-4 shadow-md shadow-black/5">
+              <div className="h-[130px] rounded-xl border border-white/20 bg-white/10" />
+              <div className="mt-3 space-y-2">
+                <div className="text-[12px] font-semibold text-black/75">사내 공지: 보안 점검</div>
+                <div className="text-[12px] text-black/55">금주 금요일 18:00 전체 점검 예정</div>
+                <div className="flex justify-end">
+                  <button className="text-[12px] text-black/60 hover:text-black/80 flex items-center gap-1">
+                    <Heart size={14} className="opacity-60" />
+                    좋아요
+                  </button>
                 </div>
-                <button className="h-9 w-9 rounded-full bg-black/5 hover:bg-black/10" />
+              </div>
+            </div>
+          </Card>
+          </div>
+        
+
+            <div className="flex flex-col gap-6">
+          {/* 캘린더(자리) */}
+          <Card title="캘린더" right="Sep 2025" className="bg-white/15 backdrop-blur shadow-md shadow-black/10">
+            <div className="rounded-2xl bg-white/20 border border-white/25 p-4 shadow-md shadow-black/5">
+              <div className="grid grid-cols-7 gap-2 text-center text-[11px] text-black/45 mb-2">
+                {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+                  <div key={d}>{d}</div>
+                ))}
               </div>
 
-              {/* 캘린더 그리드 더미 */}
-              <div className="grid grid-cols-7 gap-2 text-center text-sm">
-                {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-                  <div key={d} className="text-black/50 py-1">
-                    {d}
-                  </div>
-                ))}
-                {Array.from({ length: 35 }).map((_, i) => {
-                  const day = i - 1; // 더미
-                  const isActive = day === 8 || day === 12; // 9,13 느낌
-                  const isMid = day === 9 || day === 10 || day === 11; // 가운데 연한 블럭 느낌
-
+              <div className="grid grid-cols-7 gap-2">
+                {days.map((d) => {
+                  const isSelected = d === selectedDate;
                   return (
-                    <div
-                      key={i}
+                    <button
+                      key={d}
+                      onClick={() => setSelectedDate(d)}
                       className={[
-                        "h-9 flex items-center justify-center rounded-lg",
-                        day < 1 || day > 30 ? "text-black/20" : "text-black/80",
-                        isActive ? "bg-[#1f1f1f] text-white" : "",
-                        isMid ? "bg-black/5" : "",
+                        "h-9 rounded-xl text-[12px] border transition",
+                        isSelected
+                          ? "bg-black/80 text-white border-black/10"
+                          : "bg-white/10 text-black/70 border-white/15 hover:bg-white/20",
                       ].join(" ")}
                     >
-                      {day >= 1 && day <= 30 ? day : ""}
-                    </div>
+                      {d}
+                    </button>
                   );
                 })}
               </div>
-            </div>
 
-            {/* 오른쪽 요약 라인(디자인의 흰 줄 3개) */}
-            <div className="flex-1 pt-6">
-              <div className="space-y-4">
-                <Line />
-                <Line w="w-3/4" />
-                <Line w="w-2/3" />
+              <div className="mt-3 text-[12px] text-black/55">
+                선택 날짜: <span className="font-semibold text-black/75">{selectedDate}일</span>
+              </div>
+
+              {/* ✅ 나중에 @toast-ui/calendar 붙일 자리 */}
+              {/* <div id="tui-calendar" className="mt-4 h-[240px]" /> */}
+            </div>
+          </Card>
+
+          {/* 최근 메시지 */}
+          <Card title="최근 메시지"
+                className="bg-[#f6f2ed]/60 border-[#e5ddd5]/30 shadow-md shadow-black/10">
+            <div className="rounded-2xl bg-white/20 border border-white/25 p-4 flex gap-4 items-center shadow-md shadow-black/5">
+              <div className="h-12 w-12 border border-white/20 shadow-md shadow-black/10 px-4 py-2 rounded-xl bg-white shadow-inner" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[13px] font-semibold text-black/80">김인재 차장</div>
+                    <div className="text-[12px] text-black/55">경영</div>
+                  </div>
+                  <MessageCircle size={18} className="text-black/35" />
+                </div>
+                <div className="mt-2 text-[12px] text-black/60 truncate">
+                  오후 보고서 공유 부탁드립니다.
+                </div>
               </div>
             </div>
+          </Card>
           </div>
-        </section>
+        </div>
 
-        {/* RIGHT BIG CARD */}
-        <section
-          className="
-            col-span-4 h-[520px]
-            rounded-[34px]
-            bg-gradient-to-br from-[#4e2f21] to-[#7a4a33]
-            shadow-[20px_20px_45px_rgba(0,0,0,0.28)]
-            relative
-            overflow-hidden
-          "
-        >
-          {/* 은은한 광원 */}
-          <div className="absolute -top-28 -left-28 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
 
-          <div className="p-10 h-full text-white">
-            {/* 상단 아이콘 영역(날씨/상태) */}
-            <div className="flex items-center gap-4 mb-8">
-              <div className="h-14 w-14 rounded-2xl bg-white/10 backdrop-blur-md" />
-              <div className="h-14 w-14 rounded-2xl bg-white/10 backdrop-blur-md" />
-              <div className="h-14 w-14 rounded-2xl bg-white/10 backdrop-blur-md" />
+        {/* 우측 패널 */}
+        <aside className="hidden xl:block">
+          <section className="rounded-2xl border border-white/20 bg-white/15 backdrop-blur p-5 sticky top-6 min-h-[565px] shadow-md shadow-black/10">
+            <div className="text-[13px] font-semibold text-black/75 mb-3">요약 패널</div>
+
+            <div className="rounded-2xl bg-[#3a1f14]/70 text-white p-4 min-h-[500px] shadow-md shadow-black/20">
+              <div className="flex items-center justify-between">
+                <div className="text-[12px] opacity-85">날씨</div>
+                <div className="flex items-center gap-2 opacity-90">
+                  <Cloud size={16} />
+                  <span className="text-[12px]">흐림</span>
+                </div>
+              </div>
+
+              <div className="mt-3 text-[24px] font-semibold">3°</div>
+
+              <div className="mt-5 text-[12px] opacity-85">
+                알림/통계/KPI 영역 확장 예정
+              </div>
             </div>
-
-            {/* 중간 구분선 */}
-            <div className="h-px bg-white/20 mb-10" />
-
-            {/* 본문 라인들 */}
-            <div className="space-y-6">
-              <Line white w="w-4/5" />
-              <Line white w="w-3/5" />
-              <div className="h-px bg-white/20 my-8" />
-              <Line white w="w-4/5" />
-              <Line white w="w-2/3" />
-            </div>
-          </div>
-        </section>
+          </section>
+        </aside>
+        
       </div>
-
-      {/* 중앙 카드 클릭 시 모달 */}
-      <CenterModal open={openModal} onClose={() => setOpenModal(false)} />
-    </>
+    </div>
   );
-};
-
-const Line = ({ w = "w-full", white = false }) => (
-  <div
-    className={[
-      "h-[6px] rounded-full",
-      w,
-      white ? "bg-white/70" : "bg-white/70",
-    ].join(" ")}
-  />
-);
-
-export default Main;
+}

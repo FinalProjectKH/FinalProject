@@ -2,6 +2,7 @@ package com.example.demo.admin.modal.service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.admin.controller.AdminController.CreateEmployeeRequest;
+import com.example.demo.admin.controller.AdminController.UpdateEmployeeRequest;
 import com.example.demo.admin.modal.mapper.AdminMapper;
 import com.example.demo.common.utility.TempPwUtil;
 
@@ -97,4 +99,42 @@ public class AdminServiceImpl implements AdminService{
         return Map.of("empNo", createdEmpNo, "empId", req.empId(), "tempPw", tempPw);
 	}
 
+	//직원 퇴사
+	@Override
+	public int empResigned(String empNo) {
+		int result = mapper.empResigned(empNo);
+		return result;
+	}
+	
+	//직원 퇴사 복귀
+	@Override
+	public int empReturn(String empNo) {
+		int result = mapper.empReturn(empNo);
+		return result;
+	}
+	
+	@Override
+	public Map<String, Object> updateEmployee(UpdateEmployeeRequest req) {
+		
+	    if (req.empNo() == null) {
+	    	//400 Bad Request
+	        throw new IllegalArgumentException("empNo 필수");
+	    }
+	    
+	    if (req.empName() == null
+	            && req.empId() == null
+	            && req.deptCode() == null
+	            && req.positionCode() == null) {
+	            throw new IllegalArgumentException("수정할 항목이 없습니다.");
+	    }
+	    
+	    int updated = mapper.updateEmployee(req);
+	    
+	    if (updated == 0) {
+	    	//404 Not Found
+	        throw new NoSuchElementException("수정 대상 없음");
+	    }
+	    
+		return Map.of("success", true);
+	}
 }
