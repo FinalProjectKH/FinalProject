@@ -63,7 +63,7 @@ export const useAuthStore = create(
       logout: async ({ skipServer = false } = {}) => {
         try {
           if (!skipServer) {
-            await axiosApi.get("/employee/logout");
+            await axiosApi.post("/employee/logout");
           }
         } finally {
           set({ user: null, isLogin: false });

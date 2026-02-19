@@ -1,6 +1,7 @@
 package com.example.demo.employee.model.dto;
 
 import lombok.AllArgsConstructor;
+
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,7 +26,7 @@ public class Employee {
 	private String introduction;
 	private String profileImg;
 	// 주영 필요해서 추가작성
-	private int authorityLevel; // 권한 레벨
+	private int authorityLevel;
 	private String ownerEmpNo;
 
 }

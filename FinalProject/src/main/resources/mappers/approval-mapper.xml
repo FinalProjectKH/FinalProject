@@ -386,7 +386,7 @@
     </insert>
     
     <select id="selectDeductYn" resultType="string">
-        SELECT DEDUCTION_YN FROM VACATION_TYPE WHERE VACATION_TYPE = #{type}
+        SELECT DEDUCT_YN FROM VACATION_TYPE WHERE VACATION_TYPE = #{type}
     </select>
     
     <select id="countVacationData" resultType="_int">
@@ -395,6 +395,28 @@
     
     <select id="selectAllActiveEmpNos" resultType="string">
         SELECT EMP_NO FROM EMPLOYEE WHERE EMP_DEL_FL = 'N'
+    </select>
+    
+	<select id="selectHolidayList" resultType="string">
+        SELECT TO_CHAR(C.START_DATE, 'YYYYMMDD')
+        FROM CALENDAR C
+        JOIN CALENDAR_CATEGORY CC ON C.CAL_CATEGORY = CC.ID
+        WHERE (C.TYPE_ID = '3' OR CC.CAL_CATEGORY_TYPE = '3')  AND CC.NAME = '공휴일'                               AND C.START_DATE BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') 
+                               AND TO_DATE(#{endDate}, 'YYYY-MM-DD')
+    </select>
+    
+    <select id="countApprovedLines" resultType="_int">
+        SELECT COUNT(*)
+        FROM APPROVAL_LINE
+        WHERE DOC_NO = #{docNo}
+          AND APPLINE_STATUS IN ('C', 'R')
+    </select>
+
+	<select id="countRemainingApprovers" resultType="_int">
+        SELECT COUNT(*) 
+        FROM APPROVAL_LINE 
+        WHERE DOC_NO = #{docNo} 
+          AND APPLINE_STATUS = 'W'
     </select>
 
 </mapper>
