@@ -3,7 +3,7 @@ import { useEffect, useState  } from "react";
 import OrgTreeNode from "../org/orgTreeNode"
 import EmployeeModal from "../modal/EmployeeModal";
 
-export const ActiveOrg =() =>{
+export const ActiveOrg =({ onEmployeeClick }) =>{
     const fetchOrgTree = useOrgStore((s) => s.fetchOrgTree);
     const loading =useOrgStore((s)=>s.loading);
     const orgMap = useOrgStore((s) => s.orgMap);
@@ -33,6 +33,12 @@ export const ActiveOrg =() =>{
           open={!!openEmp}
           employee={openEmp}
           onClose={() => setOpenEmp(null)}
+          onStartDm={()=>{
+            const empNo = openEmp?.empNo ?? openEmp?.EMP_NO ?? openEmp?.id;
+             if (!empNo) return;
+             setOpenEmp(null);
+             onEmployeeClick?.({ empNo, empName: openEmp?.empName });
+          }}
         />
     </div>
   );

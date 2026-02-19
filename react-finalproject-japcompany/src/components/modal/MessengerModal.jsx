@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { X, Search } from "lucide-react";
-import { ActiveOrg } from "../org/orgTree"; // 경로는 프로젝트에 맞게 조정
+import { ActiveOrg } from "../org/orgTree"; 
+import { axiosApi } from "../../api/axiosAPI";
+import { useAuthStore } from "../../store/authStore";
+import { useRef } from "react";
 
 export default function MessengerModal({
   open,
@@ -9,17 +12,26 @@ export default function MessengerModal({
   width = 900,
   height = 560,
 }) {
+  const loginMember = useAuthStore((state) => state.user );
+
   const [pos, setPos] = useState(initialPos);
 
   // 좌측 탭: chats(대화목록) / org(조직도)
   const [activeTab, setActiveTab] = useState("chats");
 
-  // 대화방 목록(임시 데이터 구조)
+  // 대화방 목록
   const [rooms, setRooms] = useState([]);
   const [activeRoomId, setActiveRoomId] = useState(null);
 
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
+
+  //메시지
+  const [messages, setMessages] = useState([]);
+  
+  //자동 스크롤
+  const bottomRef = useRef(null);
+
 
   // 드래그
   const onDragMouseDown = (e) => {
@@ -44,14 +56,16 @@ export default function MessengerModal({
   };
 
   // 조직도에서 직원 클릭 -> DM 시작(방 찾거나 생성)
-  const startDmWith = (emp) => {
+  const startDmWith = async(emp) => {
     // emp는 최소 { empNo, empName } 형태라고 가정
     const empNo = emp?.empNo ?? emp?.EMP_NO ?? emp?.id;
     const empName = emp?.empName ?? emp?.EMP_NAME ?? emp?.name ?? "직원";
 
     if (!empNo) return;
-
-    const roomId = `dm:${empNo}`;
+    try {
+      
+    const res = await axiosApi.post("/dm", { peerEmpNo: empNo });
+    const { roomId } = res.data;
 
     setRooms((prev) => {
       const exists = prev.find((r) => r.roomId === roomId);
@@ -83,6 +97,48 @@ export default function MessengerModal({
 
     setActiveRoomId(roomId);
     setActiveTab("chats"); // A안 핵심: “닫기”가 아니라 “대화목록 탭으로 전환”
+        } catch (error) {
+      console.error("DM 생성 실패", error);
+    }
+  };
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "auto" });
+  }, [messages, activeRoomId]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const fetchRooms = async () => {
+      const res = await axiosApi.get("/dm/rooms");
+      setRooms(res.data);
+    };
+    fetchRooms();
+  }, [open]);
+
+  const fetchMessages = useCallback(async () => {
+    if (!activeRoomId) return;
+    try {
+     const res = await axiosApi.get(`/dm/${activeRoomId}/messages`);
+     setMessages(res.data);
+    } catch (error) {
+      console.error("메시지 로딩 실패:", error);
+    }
+  },[activeRoomId]);
+
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
+
+  const sendMessage =async()=>{
+    if (!activeRoomId || !draft.trim()) return;
+    try {
+     await axiosApi.post(`/dm/${activeRoomId}/messages`, { content: draft }); 
+     setDraft("");
+     await fetchMessages();
+    } catch (error) {
+      console.error("메시지 전송 실패:", error);
+    }
   };
 
   const activeRoom = useMemo(
@@ -96,26 +152,26 @@ export default function MessengerModal({
     return rooms.filter((r) => (r.title ?? "").toLowerCase().includes(q));
   }, [rooms, query]);
 
-  const sendMessage = () => {
-    if (!activeRoomId) return;
-    const text = draft.trim();
-    if (!text) return;
+  // const sendMessage = () => {
+  //   if (!activeRoomId) return;
+  //   const text = draft.trim();
+  //   if (!text) return;
 
-    setRooms((prev) =>
-      prev.map((r) => {
-        if (r.roomId !== activeRoomId) return r;
-        const now = Date.now();
-        return {
-          ...r,
-          lastMessage: text,
-          updatedAt: now,
-          messages: [...(r.messages ?? []), { id: now, mine: true, text, at: now }],
-        };
-      }).sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
-    );
+  //   setRooms((prev) =>
+  //     prev.map((r) => {
+  //       if (r.roomId !== activeRoomId) return r;
+  //       const now = Date.now();
+  //       return {
+  //         ...r,
+  //         lastMessage: text,
+  //         updatedAt: now,
+  //         messages: [...(r.messages ?? []), { id: now, mine: true, text, at: now }],
+  //       };
+  //     }).sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+  //   );
 
-    setDraft("");
-  };
+  //   setDraft("");
+  // };
 
   // open이 false면 렌더 안 함
   if (!open) return null;
@@ -142,7 +198,7 @@ export default function MessengerModal({
         </div>
 
         {/* 바디 */}
-        <div className="h-[calc(100%-48px)] grid grid-cols-[340px_1fr]">
+        <div className="h-[calc(100%-48px)] grid grid-cols-[340px_1fr] min-h-0">
           {/* 좌측 */}
           <div className="border-r border-black/10 flex flex-col h-full min-h-0">
             {/* 탭 */}
@@ -225,7 +281,7 @@ export default function MessengerModal({
           </div>
 
           {/* 우측: 채팅 */}
-          <div className="flex flex-col">
+          <div className="flex flex-col h-full min-h-0">
             {!activeRoom ? (
               <div className="h-full grid place-items-center text-black/50 text-sm">
                 대화방을 선택하세요.
@@ -261,25 +317,27 @@ export default function MessengerModal({
 
 
                 {/* 메시지 리스트 */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-black/[0.02]">
-                  {(activeRoom.messages ?? []).length === 0 ? (
+                <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 bg-black/[0.02]">
+                  {(messages ?? []).length === 0 ? (
                     <div className="text-sm text-black/45">
                       아직 메시지가 없습니다. 첫 메시지를 보내보세요.
                     </div>
                   ) : (
-                    activeRoom.messages.map((m) => (
+                    messages.map((m) => (
                       <div
-                        key={m.id}
+                        key={m.messageId}
                         className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm ${
-                          m.mine
+                          m.senderEmpNo === loginMember.empNo
                             ? "ml-auto bg-black text-white"
                             : "bg-white border border-black/10"
                         }`}
                       >
-                        {m.text}
+                        {m.content}
+                        
                       </div>
                     ))
                   )}
+                  <div ref={bottomRef} />
                 </div>
 
                 {/* 입력 */}

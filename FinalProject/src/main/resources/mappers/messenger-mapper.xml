@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.demo.messenger.model.mapper.MessengerMapper">
+	
+<!--DM 키로 roomId 조회-->
+<select id="selectDmRoomId" resultType="long">
+  SELECT ROOM_ID
+  FROM DM_ROOM_KEY
+  WHERE EMP_NO_A = #{a}
+    AND EMP_NO_B = #{b}
+</select>
+
+<!--CHAT_ROOM 생성-->
+<insert id="insertChatRoom">
+  INSERT INTO CHAT_ROOM (ROOM_ID, ROOM_TYPE, CREATED_AT, UPDATED_AT)
+  VALUES (CHAT_ROOM_SEQ.NEXTVAL, 'DM', SYSDATE, SYSDATE)
+</insert>
+
+<select id="selectLastRoomId" resultType="long">
+  SELECT CHAT_ROOM_SEQ.CURRVAL FROM DUAL
+</select>
+
+<!--멤버 추가-->
+<insert id="insertRoomMember">
+  INSERT INTO CHAT_ROOM_MEMBER (ROOM_ID, EMP_NO, JOINED_AT)
+  VALUES (#{roomId}, #{empNo}, SYSDATE)
+</insert>
+
+<!--DM 키 등록(중복 방 방지)-->
+<insert id="insertDmRoomKey">
+  INSERT INTO DM_ROOM_KEY (EMP_NO_A, EMP_NO_B, ROOM_ID)
+  VALUES (#{a}, #{b}, #{roomId})
+</insert>
+
+<select id="selectRooms" resultType="com.example.demo.messenger.controller.MessengerController$DmRoomResponse">
+SELECT 
+    CRM.ROOM_ID,
+    E.EMP_NO   AS PEER_EMP_NO,
+    E.EMP_NAME AS TITLE
+FROM CHAT_ROOM_MEMBER CRM
+JOIN CHAT_ROOM_MEMBER CRM2 
+      ON CRM.ROOM_ID = CRM2.ROOM_ID
+JOIN EMPLOYEE E 
+      ON CRM2.EMP_NO = E.EMP_NO
+WHERE CRM.EMP_NO = #{myEmpNo}
+  AND CRM2.EMP_NO != #{myEmpNo}
+</select>
+
+<select id="selectMessages"
+        resultType="com.example.demo.messenger.controller.MessengerController$MessageResponse">
+SELECT MESSAGE_ID,
+       SENDER_EMP_NO,
+       CONTENT,
+       CREATED_AT
+FROM CHAT_MESSAGE
+WHERE ROOM_ID = #{activeRoomId}
+ORDER BY CREATED_AT ASC
+</select>
+
+<select id="isRoomMember" resultType="int">
+SELECT 1
+FROM CHAT_ROOM_MEMBER
+WHERE ROOM_ID = #{activeRoomId}
+AND EMP_NO  = #{empNo}
+</select>
+
+<insert id="insertMessage">
+INSERT INTO CHAT_MESSAGE (
+  MESSAGE_ID, ROOM_ID, SENDER_EMP_NO, CONTENT, CREATED_AT
+) VALUES (
+  CHAT_MESSAGE_SEQ.NEXTVAL, #{activeRoomId}, #{empNo}, #{content}, SYSDATE
+)
+</insert>
+
+</mapper>

@@ -120,11 +120,10 @@ const Sidebar = () => {
 
       {messengerOpen && (
         <MessengerModal
-  open={messengerOpen}
-  onClose={() => setMessengerOpen(false)}
-  initialPos={orgPos}
-  // 필요하면 모달 닫힐 때 pos 저장 로직도 추가 가능
-/>
+          open={messengerOpen}
+          onClose={() => setMessengerOpen(false)}
+          initialPos={orgPos}
+        />
       )}
 
    </> 
