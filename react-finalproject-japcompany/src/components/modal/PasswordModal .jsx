@@ -74,7 +74,7 @@ const PasswordModal = ({ open, onClose }) => {
             newPw.length === 0
               ? null
               : pwRuleOk
-              ? <span className="text-emerald-600/90">형식 OK</span>
+              ? <span className="text-emerald-600/90">사용 가능한 비밀번호 입니다.</span>
               : <span className="text-rose-600/90">8~16자 + 영문/숫자/특수문자 조합이 필요합니다.</span>
           }
         />

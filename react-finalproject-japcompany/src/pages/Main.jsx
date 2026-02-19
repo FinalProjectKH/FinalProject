@@ -89,7 +89,7 @@ export default function Main() {
 
                     {/* 공지/피드 */}
           <Card title="공지 / 피드"
-          className="bg-white/15 backdrop-blur p-5 shadow-md shadow-black/10">
+          className="bg-[#f6f2ed]/60 border-[#e5ddd5]/30 backdrop-blur p-5 shadow-md shadow-black/10">
             <div className="rounded-2xl bg-white/20 border border-white/25 p-4 shadow-md shadow-black/5">
               <div className="h-[130px] rounded-xl border border-white/20 bg-white/10" />
               <div className="mt-3 space-y-2">
