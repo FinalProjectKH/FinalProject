@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { X, Search } from "lucide-react";
 import { ActiveOrg } from "../org/orgTree"; 
 import { axiosApi } from "../../api/axiosAPI";
 import { useAuthStore } from "../../store/authStore";
-import { useRef } from "react";
 
 export default function MessengerModal({
   open,
@@ -12,6 +11,9 @@ export default function MessengerModal({
   width = 900,
   height = 560,
 }) {
+  
+  const wsRef = useRef(null);
+
   const loginMember = useAuthStore((state) => state.user );
 
   const [pos, setPos] = useState(initialPos);
@@ -102,6 +104,11 @@ export default function MessengerModal({
     }
   };
 
+  const activeRoom = useMemo(
+    () => rooms.find((r) => r.roomId === activeRoomId) ?? null,
+    [rooms, activeRoomId]
+  );
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "auto" });
   }, [messages, activeRoomId]);
@@ -130,21 +137,65 @@ export default function MessengerModal({
     fetchMessages();
   }, [fetchMessages]);
 
+  useEffect(() => {
+  if (!open) return;
+
+    const ws = new WebSocket("ws://localhost/chattingSock");
+    wsRef.current = ws;
+
+    ws.onopen = () => console.log("WS 연결됨", ws.readyState);
+
+    ws.onmessage = (e) => {
+      console.log("WS recv raw:", e.data);  
+      const msg = JSON.parse(e.data);
+
+      const normalized = {
+        messageId: crypto.randomUUID?.() ?? Date.now(),  // 임시 key
+        roomId: msg.roomId,
+        content: msg.content,
+        senderEmpNo:
+          String(msg.targetEmpNo) === String(activeRoom?.peerEmpNo)
+            ? String(loginMember.empNo)           // 내가 보낸 것
+            : String(activeRoom?.peerEmpNo),      // 상대가 보낸 것(대충)
+        sentAt: new Date().toISOString(),
+      };
+
+      if (String(normalized.roomId) === String(activeRoomId)) {
+        setMessages((prev) => [...prev, normalized]);
+      }
+    };
+    ws.onerror = (e) => console.log("WS 에러", e);
+    ws.onclose = () => console.log("WS 종료", ws.readyState);
+    
+    return  () => {
+    // open이 false로 바뀔 때만 닫히게
+    ws.close();
+    wsRef.current = null;
+  };
+  }, [open, activeRoomId, activeRoom, loginMember]);
+
   const sendMessage =async()=>{
     if (!activeRoomId || !draft.trim()) return;
-    try {
-     await axiosApi.post(`/dm/${activeRoomId}/messages`, { content: draft }); 
-     setDraft("");
-     await fetchMessages();
-    } catch (error) {
-      console.error("메시지 전송 실패:", error);
+
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      console.log("WS 아직 OPEN 아님:", ws?.readyState);
+      return;
     }
+
+    const payload = {
+      roomId: activeRoomId,
+      targetEmpNo: activeRoom.peerEmpNo,
+      content: draft,
+    };
+
+    console.log("WS send:", payload);
+    ws.send(JSON.stringify(payload));
+
+    setDraft("");
   };
 
-  const activeRoom = useMemo(
-    () => rooms.find((r) => r.roomId === activeRoomId) ?? null,
-    [rooms, activeRoomId]
-  );
+
 
   const filteredRooms = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -323,11 +374,11 @@ export default function MessengerModal({
                       아직 메시지가 없습니다. 첫 메시지를 보내보세요.
                     </div>
                   ) : (
-                    messages.map((m) => (
+                    messages.map((m, idx) => (
                       <div
-                        key={m.messageId}
+                        key={m.messageId ?? `${m.senderEmpNo}-${m.sentAt}-${idx}`}
                         className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm ${
-                          m.senderEmpNo === loginMember.empNo
+                          String(m.senderEmpNo) === String(loginMember.empNo)
                             ? "ml-auto bg-black text-white"
                             : "bg-white border border-black/10"
                         }`}
