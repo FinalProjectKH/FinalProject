@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Clock, LogIn, LogOut, Heart, MessageCircle, Cloud } from "lucide-react";
 import { axiosApi } from "../api/axiosAPI";
+import { useAttendance } from "../contexts/AttendanceContext";
+import { useAuthStore } from "../store/authStore";
 
 const Card = ({ title, right, children, className = "" }) => (
   <section className={`rounded-2xl border border-white/20 p-5 ${className}`}>
@@ -14,9 +16,57 @@ const Card = ({ title, right, children, className = "" }) => (
 );
 
 export default function Main() {
+  const { user, refreshTrigger } = useAuthStore();
   const [now, setNow] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(9);
   const [recentMessage, setRecentMessage] = useState(null);
+  const { handleCheckIn, handleCheckOut } = useAttendance();
+  const [todayAttendance, setTodayAttendance] = useState(null);
+
+  //근태 시간
+  useEffect(() => {
+  const fetchToday = async () => {
+    if (!user?.empNo) return setTodayAttendance(null);
+
+    try {
+      const res = await axiosApi.get(`/api/attendance/weekly/${user.empNo}`);
+      const data = res.data || [];
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      const todayRecord =
+        data.find(r => String(r.workDate || r.date || "").startsWith(todayStr)) ||
+        data.find(r => String(r.startTime || "").startsWith(todayStr));
+
+      const toHHMMSS = (isoLike) => {
+        if (!isoLike) return null;
+        const t = String(isoLike).split("T")[1];
+        return t ? t.split(".")[0] : null;
+      };
+
+      const minutesToHHMMSS = (mins) => {
+        const totalSec = Math.max(0, Math.floor(Number(mins || 0) * 60));
+        const hh = String(Math.floor(totalSec / 3600)).padStart(2, "0");
+        const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
+        const ss = String(totalSec % 60).padStart(2, "0");
+        return `${hh}:${mm}:${ss}`;
+      };
+
+      if (!todayRecord) return setTodayAttendance(null);
+
+      setTodayAttendance({
+        startText: toHHMMSS(todayRecord.startTime),
+        workedText: todayRecord.workMinutes != null ? minutesToHHMMSS(todayRecord.workMinutes) : null,
+        hasEnd: Boolean(todayRecord.endTime),
+      });
+    } catch (e) {
+      console.error("오늘 근태 조회 실패", e);
+      setTodayAttendance(null);
+    }
+  };
+
+  fetchToday();
+}, [user?.empNo, refreshTrigger]);
 
   useEffect(() => {
     const fetchRecent = async () => {
@@ -74,10 +124,17 @@ export default function Main() {
           >
             <div className="rounded-2xl bg-white/20 border border-white/25 p-4 shadow-md shadow-black/5">
               <div className="text-[22px] font-semibold text-black/80">{timeText}</div>
-              <div className="text-[12px] text-black/50 mt-1">오늘 근무: 00:00:00</div>
+              <div className="text-[12px] text-black/50 mt-1">
+                {todayAttendance?.hasEnd && todayAttendance?.workedText
+                  ? `오늘 근무 : ${todayAttendance.workedText}`
+                  : todayAttendance?.startText
+                    ? `출근 시간 : ${todayAttendance.startText}`
+                    : "오늘 근무 : 00:00:00"}
+              </div>
 
               <div className="mt-4 flex gap-3">
                 <button 
+                onClick={handleCheckIn}
                 className="flex-1 rounded-xl px-4 py-2 text-[13px] 
                 bg-[#6b3f2a]/90 text-white 
                 flex items-center justify-center gap-2 
@@ -90,6 +147,7 @@ export default function Main() {
                   출근
                 </button>
                 <button 
+                onClick={handleCheckOut}
                 className="flex-1 rounded-xl px-4 py-2 text-[13px]
                 bg-[#c27a4a]/90 text-white 
                 flex items-center justify-center gap-2
