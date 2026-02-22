@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Param;
 
 import com.example.demo.messenger.controller.MessengerController.DmRoomResponse;
 import com.example.demo.messenger.controller.MessengerController.MessageResponse;
+import com.example.demo.messenger.controller.MessengerController.RecentMessageResponse;
 
 @Mapper
 public interface MessengerMapper {
@@ -27,5 +28,11 @@ public interface MessengerMapper {
 	  Integer isRoomMember(@Param("activeRoomId") Long activeRoomId, @Param("empNo") String empNo);
 
 	  void insertMessage(@Param("activeRoomId") Long activeRoomId, @Param("empNo") String myEmpNo, @Param("content") String content);
+
+	  RecentMessageResponse preview(String myEmpNo);
+
+	  int unreadCount(String empNo);
+
+	  void markRead(@Param("roomId") Long roomId, @Param("empNo") String empNo);
 
 }

@@ -11,10 +11,11 @@ export default function MessengerModal({
   width = 900,
   height = 560,
 }) {
+  const loginMember = useAuthStore((state) => state.user );
+
+  const myEmpNo = String(loginMember.empNo);
   
   const wsRef = useRef(null);
-
-  const loginMember = useAuthStore((state) => state.user );
 
   const [pos, setPos] = useState(initialPos);
 
@@ -33,6 +34,10 @@ export default function MessengerModal({
   
   //자동 스크롤
   const bottomRef = useRef(null);
+
+  //메시지 안잃음
+  const unreadCount = useAuthStore((s) => s.unreadCount);
+  const fetchUnreadCount = useAuthStore((s) => s.fetchUnreadCount);
 
 
   // 드래그
@@ -109,6 +114,32 @@ export default function MessengerModal({
     [rooms, activeRoomId]
   );
 
+  const lastReadAt = activeRoom?.lastReadAt ? new Date(activeRoom.lastReadAt) : new Date(0);
+
+  useEffect(() => {
+  if (!activeRoomId) return;
+
+  const markRead = async () => {
+    try {
+      await axiosApi.post(`/dm/rooms/${activeRoomId}/read`);
+
+      // ✅ 메신저 방 목록의 뱃지(1) 즉시 제거
+      setRooms((prev) =>
+        prev.map((r) =>
+          r.roomId === activeRoomId ? { ...r, unreadCount: 0, lastReadAt: new Date().toISOString() } : r
+        )
+      );
+
+      // 사이드바 총 뱃지 갱신(fetchUnreadCount 재사용)
+      fetchUnreadCount?.();
+    } catch (e) {
+      console.error("읽음 처리 실패", e);
+    }
+  };
+
+  markRead();
+}, [activeRoomId]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "auto" });
   }, [messages, activeRoomId]);
@@ -150,29 +181,37 @@ export default function MessengerModal({
       const msg = JSON.parse(e.data);
 
       const normalized = {
-        messageId: crypto.randomUUID?.() ?? Date.now(),  // 임시 key
+        messageId:  msg.messageId ?? crypto.randomUUID?.() ?? Date.now(),  // 임시 key
         roomId: msg.roomId,
         content: msg.content,
-        senderEmpNo:
-          String(msg.targetEmpNo) === String(activeRoom?.peerEmpNo)
-            ? String(loginMember.empNo)           // 내가 보낸 것
-            : String(activeRoom?.peerEmpNo),      // 상대가 보낸 것(대충)
-        sentAt: new Date().toISOString(),
+        senderEmpNo: String(msg.senderEmpNo),
+        sentAt: msg.sentAt ?? new Date().toISOString(),
       };
 
-      if (String(normalized.roomId) === String(activeRoomId)) {
+      console.log("현재 activeRoomId(ref):", activeRoomRef.current);
+      console.log("수신 roomId:", normalized.roomId);
+
+      if (!activeRoomRef.current) return;
+
+      if (Number(normalized.roomId) === Number(activeRoomRef.current)) {
         setMessages((prev) => [...prev, normalized]);
       }
     };
     ws.onerror = (e) => console.log("WS 에러", e);
     ws.onclose = () => console.log("WS 종료", ws.readyState);
-    
+
     return  () => {
     // open이 false로 바뀔 때만 닫히게
     ws.close();
     wsRef.current = null;
   };
-  }, [open, activeRoomId, activeRoom, loginMember]);
+  }, [open]);
+
+  const activeRoomRef = useRef(null);
+
+  useEffect(() => {
+    activeRoomRef.current = activeRoomId;
+  }, [activeRoomId]);
 
   const sendMessage =async()=>{
     if (!activeRoomId || !draft.trim()) return;
@@ -374,20 +413,36 @@ export default function MessengerModal({
                       아직 메시지가 없습니다. 첫 메시지를 보내보세요.
                     </div>
                   ) : (
-                    messages.map((m, idx) => (
-                      <div
-                        key={m.messageId ?? `${m.senderEmpNo}-${m.sentAt}-${idx}`}
-                        className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm ${
-                          String(m.senderEmpNo) === String(loginMember.empNo)
-                            ? "ml-auto bg-black text-white"
-                            : "bg-white border border-black/10"
-                        }`}
-                      >
-                        {m.content}
-                        
-                      </div>
-                    ))
-                  )}
+                    messages.map((m, idx) => {
+                      const isMine = String(m.senderEmpNo) === myEmpNo;
+                      const createdAt = new Date(m.sentAt ?? m.createdAt); // 둘 중 하나로 통일
+                      const showUnread1 = isMine && createdAt > lastReadAt;
+                      return(
+                        <div
+                          key={m.messageId ?? `${m.senderEmpNo}-${m.sentAt}-${idx}`}
+                          className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+                        >
+                          <div className="relative max-w-[70%]">
+                            {/* 말풍선 */}
+                            <div
+                              className={`rounded-2xl px-3 py-2 text-sm ${
+                                isMine ? "bg-black text-white" : "bg-white border border-black/10"
+                              }`}
+                            >
+                              {m.content}
+                            </div>
+                            
+                            {/*  1을 말풍선 '바깥'에 고정 */}
+                            {/* {isMine && showUnread1 && (
+                              <span className="absolute -left-3 bottom-0 text-[11px] font-semibold text-black/50">
+                                1
+                              </span>
+                            )} */}
+                          </div>
+                        </div>
+                    );
+                  })
+                )}
                   <div ref={bottomRef} />
                 </div>
 

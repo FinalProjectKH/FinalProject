@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.example.demo.messenger.controller.MessengerController.DmRoomResponse;
 import com.example.demo.messenger.controller.MessengerController.MessageResponse;
+import com.example.demo.messenger.controller.MessengerController.RecentMessageResponse;
 
 public interface MessengerService {
 	
@@ -18,5 +19,11 @@ public interface MessengerService {
 	
 	//메시지 보내기
 	void sendMessage(Long activeRoomId, String myEmpNo, String content);
+
+	RecentMessageResponse preview(String myEmpNo);
+
+	int unreadCount(String empNo);
+
+	void markRead(Long roomId, String empNo);
 	
 }

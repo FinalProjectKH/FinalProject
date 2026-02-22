@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.messenger.controller.MessengerController.DmRoomResponse;
 import com.example.demo.messenger.controller.MessengerController.MessageResponse;
+import com.example.demo.messenger.controller.MessengerController.RecentMessageResponse;
 import com.example.demo.messenger.model.mapper.MessengerMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -84,6 +85,32 @@ public class MessengerServiceImpl implements MessengerService{
 			throw new RuntimeException("해당 대화방에 접근 권한이 없습니다.");	
 		}
 		mapper.insertMessage(activeRoomId, myEmpNo, content);
+	}
+	
+	//메인 화면(최근 메시지)
+	@Override
+	public RecentMessageResponse preview(String myEmpNo) {
+		
+		RecentMessageResponse message = mapper.preview(myEmpNo);
+		
+	    if (message == null) {
+	        return null; // 또는 Optional 처리도 가능
+	    }
+		
+		return message;
+	}
+	
+	//사이드바 메신저 벳지 조회(안잃은 메시지)
+	@Override
+	public int unreadCount(String empNo) {
+		int count = mapper.unreadCount(empNo);
+		return count;
+	}
+	
+	//
+	@Override
+	public void markRead(Long roomId, String empNo) {
+		mapper.markRead(roomId, empNo);
 	}
 
 }

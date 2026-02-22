@@ -28,7 +28,9 @@ public class MessengerController {
 	public record DmRoomResponse(
 			Long roomId,
 		    String peerEmpNo,
-		    String title) {}
+		    String title,
+		    LocalDateTime lastReadAt
+			) {}
 	
 	public record MessageResponse(
 		    Long messageId,
@@ -38,6 +40,18 @@ public class MessengerController {
 		) {}
 	
 	public record SendMessageRequest(String content) {}
+	
+	public record RecentMessageResponse(
+		    Long roomId,
+		    Long messageId,
+		    String senderEmpNo,
+		    String content,
+		    LocalDateTime sentAt,
+		    String senderName,
+		    String senderDeptName,
+		    String senderPositionName,
+		    String profileImg
+		) {}
 
 
 	@PostMapping
@@ -52,7 +66,7 @@ public class MessengerController {
 
 	    Long roomId = service.createOrGetDmRoom(myEmpNo, peerEmpNo);
 
-	    return  ResponseEntity.ok(new DmRoomResponse(roomId, null, null));
+	    return  ResponseEntity.ok(new DmRoomResponse(roomId, null, null, null));
 	}
 	
 	@GetMapping("rooms")
@@ -86,5 +100,45 @@ public class MessengerController {
 		
 		return ResponseEntity.ok().build();
 	}
+	
+	@GetMapping("preview")
+	public ResponseEntity<RecentMessageResponse> preview(HttpSession session){
+		LoginMemberDTO loginMember = (LoginMemberDTO) session.getAttribute("loginMember");
+		
+	    if (loginMember == null) {
+	        return ResponseEntity.status(401).build();
+	    }
+	    
+		String myEmpNo = loginMember.getEmpNo();
+		
+		RecentMessageResponse message = service.preview(myEmpNo);
+		
+		return  ResponseEntity.ok(message);
+	}
+	
+	@GetMapping("unread-count")
+	public ResponseEntity<Integer> unreadCount(HttpSession session){
+		LoginMemberDTO loginMember = (LoginMemberDTO) session.getAttribute("loginMember");
+		
+	    if (loginMember == null) {
+	        return ResponseEntity.status(401).build();
+	    }
+	    
+	    String empNo = loginMember.getEmpNo();
+	    
+	    int count = service.unreadCount(empNo);
+	    
+	    return ResponseEntity.ok(count);
+	    
+	}
+	
+	  @PostMapping("/rooms/{roomId}/read")
+	  public ResponseEntity<Void> markRead(@PathVariable("roomId") Long roomId, HttpSession session) {
+	    LoginMemberDTO loginMember = (LoginMemberDTO) session.getAttribute("loginMember");
+	    if (loginMember == null) return ResponseEntity.status(401).build();
+
+	    service.markRead(roomId, loginMember.getEmpNo());
+	    return ResponseEntity.ok().build();
+	  }
 	
 }

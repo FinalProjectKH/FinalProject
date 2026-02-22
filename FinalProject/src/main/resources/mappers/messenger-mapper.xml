@@ -36,7 +36,8 @@
 SELECT 
     CRM.ROOM_ID,
     E.EMP_NO   AS PEER_EMP_NO,
-    E.EMP_NAME AS TITLE
+    E.EMP_NAME AS TITLE,
+    CRM.LAST_READ_AT
 FROM CHAT_ROOM_MEMBER CRM
 JOIN CHAT_ROOM_MEMBER CRM2 
       ON CRM.ROOM_ID = CRM2.ROOM_ID
@@ -71,5 +72,50 @@ INSERT INTO CHAT_MESSAGE (
   CHAT_MESSAGE_SEQ.NEXTVAL, #{activeRoomId}, #{empNo}, #{content}, SYSDATE
 )
 </insert>
+
+<select id="preview">
+SELECT *
+FROM (
+    SELECT
+        CM.ROOM_ID,
+        CM.MESSAGE_ID,
+        CM.SENDER_EMP_NO,
+        CM.CONTENT,
+        CM.CREATED_AT AS SENT_AT,
+        E.EMP_NAME            AS SENDER_NAME,
+        D.DEPT_NAME           AS SENDER_DEPT_NAME,
+        P.POSITION_NAME       AS SENDER_POSITION_NAME,
+        E.PROFILE_IMG         AS PROFILE_IMG
+    FROM CHAT_MESSAGE CM
+    JOIN CHAT_ROOM_MEMBER CRM
+         ON CM.ROOM_ID = CRM.ROOM_ID
+    JOIN EMPLOYEE E
+         ON CM.SENDER_EMP_NO = E.EMP_NO
+    LEFT JOIN DEPARTMENT D
+         ON E.DEPT_CODE = D.DEPT_CODE
+    LEFT JOIN POSITION P
+         ON E.POSITION_CODE = P.POSITION_CODE
+    WHERE CRM.EMP_NO = #{myEmpNo}
+    ORDER BY CM.CREATED_AT DESC
+)
+WHERE ROWNUM = 1
+</select>
+
+<select id="unreadCount" resultType="int">
+SELECT COUNT(*)
+FROM CHAT_MESSAGE m
+JOIN CHAT_ROOM_MEMBER rm
+  ON rm.ROOM_ID = m.ROOM_ID
+WHERE rm.EMP_NO = #{empNo}
+  AND <![CDATA[m.SENDER_EMP_NO <> #{empNo}]]>
+  AND m.CREATED_AT > NVL(rm.LAST_READ_AT, TO_DATE('1970-01-01','YYYY-MM-DD'))
+</select>
+
+<select id="markRead">
+UPDATE CHAT_ROOM_MEMBER
+SET LAST_READ_AT = SYSDATE
+WHERE ROOM_ID = #{roomId}
+  AND EMP_NO  = #{empNo}
+</select>
 
 </mapper>

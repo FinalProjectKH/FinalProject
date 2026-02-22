@@ -1,6 +1,7 @@
 package com.example.demo.websocket.handler;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 public class ChattingWebSocketHandler extends TextWebSocketHandler{
 	
 	private final MessengerService service;
-	private final ObjectMapper objectMapper = new ObjectMapper(); 
+	private final ObjectMapper objectMapper; 
 	
 	// empNo → 접속 세션들
     private final Map<String, Set<WebSocketSession>> empSessions = new ConcurrentHashMap<>();
@@ -60,15 +61,22 @@ public class ChattingWebSocketHandler extends TextWebSocketHandler{
 
         String myEmpNo = loginMember.getEmpNo();
 
-        // 1️⃣ DB 저장
+        // 1️ DB 저장
         service.sendMessage(msg.roomId(), myEmpNo, msg.content());
+        
+        WsMessageResponse res = new WsMessageResponse(
+        		msg.roomId(),
+                myEmpNo,                 // sender
+                msg.content(),
+                LocalDateTime.now().toString()      // sentAt (DB시간과 100% 일치 원하면 아래 2번 참고)
+            );
 
-        // 2️⃣ 방 참여자에게 push
-        pushToUser(myEmpNo, msg);               // 나
-        pushToUser(msg.targetEmpNo(), msg);     // 상대
+        // 2️ 방 참여자에게 push
+        pushToUser(myEmpNo, res);               // 나
+        pushToUser(msg.targetEmpNo(), res);     // 상대
     }
 
-    private void pushToUser(String empNo, WsMessage msg) throws IOException {
+    private void pushToUser(String empNo, WsMessageResponse msg) throws IOException {
 
         Set<WebSocketSession> sessions = empSessions.get(empNo);
         if (sessions == null) return;
@@ -76,9 +84,7 @@ public class ChattingWebSocketHandler extends TextWebSocketHandler{
         String json = objectMapper.writeValueAsString(msg);
 
         for (WebSocketSession s : sessions) {
-            if (s.isOpen()) {
-                s.sendMessage(new TextMessage(json));
-            }
+            if (s.isOpen()) s.sendMessage(new TextMessage(json));
         }
     }
     
@@ -87,6 +93,13 @@ public class ChattingWebSocketHandler extends TextWebSocketHandler{
             Long roomId,
             String targetEmpNo,
             String content
+    ) {}
+    
+    public record WsMessageResponse(
+            Long roomId,
+            String senderEmpNo,
+            String content,
+            String sentAt
     ) {}
 }
     

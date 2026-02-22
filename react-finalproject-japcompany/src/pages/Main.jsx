@@ -1,6 +1,7 @@
 // src/pages/Main.jsx
 import { useEffect, useMemo, useState } from "react";
 import { Clock, LogIn, LogOut, Heart, MessageCircle, Cloud } from "lucide-react";
+import { axiosApi } from "../api/axiosAPI";
 
 const Card = ({ title, right, children, className = "" }) => (
   <section className={`rounded-2xl border border-white/20 p-5 ${className}`}>
@@ -15,6 +16,23 @@ const Card = ({ title, right, children, className = "" }) => (
 export default function Main() {
   const [now, setNow] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(9);
+  const [recentMessage, setRecentMessage] = useState(null);
+
+  useEffect(() => {
+    const fetchRecent = async () => {
+      try {
+        const res = await axiosApi.get("/dm/preview");
+        setRecentMessage(res.data);
+      } catch (err) {
+        console.error("최근 메시지 조회 실패", err);
+      }
+    };
+    
+    fetchRecent();
+    const interval = setInterval(fetchRecent, 30000); // 30초마다
+
+    return () => clearInterval(interval); // 메모리 누수 방지
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -109,7 +127,7 @@ export default function Main() {
 
             <div className="flex flex-col gap-6">
           {/* 캘린더(자리) */}
-          <Card title="캘린더" right="Sep 2025" className="bg-white/15 backdrop-blur shadow-md shadow-black/10">
+          <Card title="캘린더" right="Sep 2025" className="bg-[#f6f2ed]/60 border-[#e5ddd5]/30 backdrop-blur shadow-md shadow-black/10">
             <div className="rounded-2xl bg-white/20 border border-white/25 p-4 shadow-md shadow-black/5">
               <div className="grid grid-cols-7 gap-2 text-center text-[11px] text-black/45 mb-2">
                 {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
@@ -150,17 +168,32 @@ export default function Main() {
           <Card title="최근 메시지"
                 className="bg-[#f6f2ed]/60 border-[#e5ddd5]/30 shadow-md shadow-black/10">
             <div className="rounded-2xl bg-white/20 border border-white/25 p-4 flex gap-4 items-center shadow-md shadow-black/5">
-              <div className="h-12 w-12 border border-white/20 shadow-md shadow-black/10 px-4 py-2 rounded-xl bg-white shadow-inner" />
+              {/* <div className="h-12 w-12 border border-white/20 shadow-md shadow-black/10 px-4 py-2 rounded-xl bg-white shadow-inner" /> */}
+              <img
+                src={recentMessage?.profileImg || "/image/user.png"}
+                alt="프로필"
+                className="h-12 w-12 rounded-xl object-cover border border-white/35 shadow-md shadow-black/10 shadow-inner"
+                onError={(e) => {
+                e.currentTarget.onerror = null; // 무한루프 방지
+                e.currentTarget.src = "/image/user.png";
+              }}
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-[13px] font-semibold text-black/80">김인재 차장</div>
-                    <div className="text-[12px] text-black/55">경영</div>
+                    <div className="text-[13px] font-semibold text-black/80">
+                      {recentMessage?.senderName ?? "최근 메시지 없음"}
+                      {" "}
+                      {recentMessage?.senderPositionName ?? ""}
+                    </div>
+                    <div className="text-[12px] text-black/55">
+                      {recentMessage?.senderDeptName ?? ""}
+                    </div>
                   </div>
                   <MessageCircle size={18} className="text-black/35" />
                 </div>
                 <div className="mt-2 text-[12px] text-black/60 truncate">
-                  오후 보고서 공유 부탁드립니다.
+                  {recentMessage?.content ?? ""}
                 </div>
               </div>
             </div>
@@ -171,7 +204,7 @@ export default function Main() {
 
         {/* 우측 패널 */}
         <aside className="hidden xl:block">
-          <section className="rounded-2xl border border-white/20 bg-white/15 backdrop-blur p-5 sticky top-6 min-h-[565px] shadow-md shadow-black/10">
+          <section className="rounded-2xl border bg-[#f6f2ed]/30 border-[#e5ddd5]/30 backdrop-blur p-5 sticky top-6 min-h-[565px] shadow-md shadow-black/10">
             <div className="text-[13px] font-semibold text-black/75 mb-3">요약 패널</div>
 
             <div className="rounded-2xl bg-[#3a1f14]/70 text-white p-4 min-h-[500px] shadow-md shadow-black/20">

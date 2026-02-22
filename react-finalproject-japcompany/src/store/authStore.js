@@ -16,11 +16,24 @@ export const useAuthStore = create(
       user: null,     // 로그인한 사원 정보
       isLogin: false,
 
+      unreadCount: 0,
+
       // 1. 새로고침 신호를 위한 상태 추가 (숫자가 바뀔 때마다 신호가 감)
       refreshTrigger: 0,
       setUser: (user) => set({ user, isLogin: !!user }),
+      setUnreadCount: (n) => set({ unreadCount: Number(n) || 0 }),
 
       /* ====== Actions ====== */
+      fetchUnreadCount: async () => {
+        try {
+          const res = await axiosApi.get("/dm/unread-count");
+          set({ unreadCount: Number(res.data) || 0 }); // 서버가 숫자만 반환하는 구조
+        } catch (e) {
+          // 로그인 전/세션 만료 등으로 401이면 그냥 0으로 두는 것도 방법
+          if (e?.response?.status === 401) set({ unreadCount: 0 });
+          else console.error("unreadCount 조회 실패", e);
+        }
+      },
 
       // 2. 신호를 발생시키는 액션 추가
       triggerRefresh: () => set((state) => ({ 
@@ -42,6 +55,7 @@ export const useAuthStore = create(
 
         // 로그인 성공
         set({ user: employeeInfo, isLogin: true });
+        await get().fetchUnreadCount();
 
         localStorage.setItem("loginEmpNo", employeeInfo.empNo);
         localStorage.setItem("authorityLevel", employeeInfo.authorityLevel);
@@ -66,7 +80,7 @@ export const useAuthStore = create(
             await axiosApi.post("/employee/logout");
           }
         } finally {
-          set({ user: null, isLogin: false });
+          set({ user: null, isLogin: false, unreadCount: 0 });
 
           if (get()._logoutTimer) {
             clearTimeout(get()._logoutTimer);
