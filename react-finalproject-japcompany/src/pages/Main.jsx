@@ -1,6 +1,6 @@
 // src/pages/Main.jsx
 import { useEffect, useMemo, useState } from "react";
-import { Clock, LogIn, LogOut, Heart, MessageCircle, Cloud } from "lucide-react";
+import { Clock, LogIn, LogOut, Heart, MessageCircle, Sun, Cloud, CloudSun, CloudRain, CloudSnow } from "lucide-react";
 import { axiosApi } from "../api/axiosAPI";
 import { useAttendance } from "../contexts/AttendanceContext";
 import { useAuthStore } from "../store/authStore";
@@ -22,6 +22,54 @@ export default function Main() {
   const [recentMessage, setRecentMessage] = useState(null);
   const { handleCheckIn, handleCheckOut } = useAttendance();
   const [todayAttendance, setTodayAttendance] = useState(null);
+  const [weather, setWeather] = useState(null);
+  const [weatherDays, setWeatherDays] = useState([]);
+
+  const weatherView = ({ sky, pty }) => {
+    // 강수 우선
+    if (pty === 1 || pty === 2 || pty === 5 || pty === 6) return { Icon: CloudRain, label: "비" };
+    if (pty === 3 || pty === 7) return { Icon: CloudSnow, label: "눈" };
+    if (pty === 4) return { Icon: CloudRain, label: "소나기" };
+
+    // 하늘 상태
+    if (sky === 1) return { Icon: Sun, label: "맑음" };
+    if (sky === 3) return { Icon: CloudSun, label: "구름많음" };
+    return { Icon: Cloud, label: "흐림" }; // sky=4
+  };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/weather/now?nx=60&ny=127");
+        const data = await res.json();
+        setWeather(data);
+      } catch (e) {
+        console.error("날씨 조회 실패", e);
+      }
+    })();
+  }, []);
+
+  const { Icon, label } = weather ? weatherView(weather) : { Icon: Cloud, label: "로딩" };
+
+  // 3일(오늘/내일/모레) TMN/TMX
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/weather/3days?nx=60&ny=127");
+        const data = await res.json();
+        setWeatherDays(data); // 3개
+      } catch (e) {
+        console.error("3일 예보 조회 실패", e);
+        setWeatherDays([]);
+      }
+    })();
+  }, []);
+
+  const sizeByIndex = (i) => {
+    if (i === 0) return { icon: 48, max: "text-[22px]", min: "text-[13px]" }; // 오늘
+    if (i === 1) return { icon: 32, max: "text-[16px]", min: "text-[12px]" }; // 내일
+    return { icon: 20, max: "text-[13px]", min: "text-[11px]" }; // 모레
+  };
 
   //근태 시간
   useEffect(() => {
@@ -163,11 +211,14 @@ export default function Main() {
             </div>
           </Card>
 
-                    {/* 공지/피드 */}
+          {/* 공지/피드 */}
           <Card title="공지 / 피드"
           className="bg-[#f6f2ed]/60 border-[#e5ddd5]/30 backdrop-blur p-5 shadow-md shadow-black/10">
             <div className="rounded-2xl bg-white/20 border border-white/25 p-4 shadow-md shadow-black/5">
-              <div className="h-[130px] rounded-xl border border-white/20 bg-white/10" />
+              <img 
+               src="/image/boardImg.jpg"
+               alt="게시판 이미지"
+               className="h-[130px] w-full rounded-xl border border-white/20 object-cover" />
               <div className="mt-3 space-y-2">
                 <div className="text-[12px] font-semibold text-black/75">사내 공지: 보안 점검</div>
                 <div className="text-[12px] text-black/55">금주 금요일 18:00 전체 점검 예정</div>
@@ -230,7 +281,7 @@ export default function Main() {
               <img
                 src={recentMessage?.profileImg || "/image/user.png"}
                 alt="프로필"
-                className="h-12 w-12 rounded-xl object-cover border border-white/35 shadow-md shadow-black/10 shadow-inner"
+                className="h-14 w-14 rounded-xl object-cover border border-white/35 shadow-md shadow-black/10 shadow-inner"
                 onError={(e) => {
                 e.currentTarget.onerror = null; // 무한루프 방지
                 e.currentTarget.src = "/image/user.png";
@@ -262,23 +313,74 @@ export default function Main() {
 
         {/* 우측 패널 */}
         <aside className="hidden xl:block">
-          <section className="rounded-2xl border bg-[#f6f2ed]/30 border-[#e5ddd5]/30 backdrop-blur p-5 sticky top-6 min-h-[565px] shadow-md shadow-black/10">
+          <section className="rounded-2xl border bg-[#f6f2ed]/30 border-[#e5ddd5]/30 backdrop-blur p-5 sticky top-6 min-h-[557px] shadow-md shadow-black/10">
             <div className="text-[13px] font-semibold text-black/75 mb-3">요약 패널</div>
 
-            <div className="rounded-2xl bg-[#3a1f14]/70 text-white p-4 min-h-[500px] shadow-md shadow-black/20">
+            <div className="rounded-2xl bg-[#3a1f14]/70 text-white p-4 min-h-[485px] shadow-md shadow-black/20">
               <div className="flex items-center justify-between">
                 <div className="text-[12px] opacity-85">날씨</div>
                 <div className="flex items-center gap-2 opacity-90">
-                  <Cloud size={16} />
-                  <span className="text-[12px]">흐림</span>
+                  <Icon size={16} />
+                  <span className="text-[12px]">{label}</span>
                 </div>
               </div>
 
-              <div className="mt-3 text-[24px] font-semibold">3°</div>
 
-              <div className="mt-5 text-[12px] opacity-85">
-                알림/통계/KPI 영역 확장 예정
-              </div>
+                {/* 오늘(현재) 크게 */}
+                <div className="mt-4 flex items-center gap-7">
+                  <Icon size={56} />
+                  <div>
+                    <div className="text-[34px] font-semibold leading-none">
+                      {weather ? `${weather.temp}°` : "-"}
+                    </div>
+                    <div className="mt-1 text-[12px] opacity-85">
+                      {weatherDays?.[0]?.tempMin != null && weatherDays?.[0]?.tempMax != null
+                        ? `최저 ${weatherDays[0].tempMin}° / 최고 ${weatherDays[0].tempMax}°`
+                        : "최저/최고 -"}
+                    </div>
+                  </div>
+                </div>
+                      
+                {/* 3일 예보(오늘/내일/모레) */}
+                <div className="mt-6 space-y-5">
+                  {weatherDays.map((d, i) => {
+                    const { icon, max, min } = sizeByIndex(i);
+                    const { Icon: DIcon, label: DLabel } = weatherView({ sky: d.sky, pty: d.pty });
+                    const dayText = i === 0 ? "오늘" : i === 1 ? "내일" : "모레";
+                  
+                    return (
+                      <div
+                        key={d.date ?? i}
+                        className="flex items-center justify-between rounded-xl bg-white/10 border border-white/10 px-3 py-2"
+                      >
+                        <div className="flex items-center gap-3">
+                          <DIcon size={icon} />
+                          <div>
+                            <div className="text-[12px] font-semibold">
+                              {dayText} <span className="ml-2 text-[11px] opacity-80">{DLabel}</span>
+                            </div>
+                            <div className="text-[11px] opacity-75">{d.date}</div>
+                          </div>
+                        </div>
+                    
+                        <div className="text-right">
+                          <div className={`${max} font-semibold leading-none`}>
+                            {d.tempMax != null ? `${d.tempMax}°` : "-"}
+                          </div>
+                          <div className={`${min} opacity-80`}>
+                            {d.tempMin != null ? `/${d.tempMin}°` : "/-"}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* <div className="mt-6 text-[12px] opacity-85">
+                  알림/통계/KPI 영역 확장 예정
+                </div> */}
+
+
             </div>
           </section>
         </aside>
