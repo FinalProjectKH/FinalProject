@@ -20,20 +20,21 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.calendar.model.dto.CalendarCategoryDto;
 import com.example.demo.calendar.model.dto.CalendarDto;
 import com.example.demo.calendar.model.service.CalendarService;
+import com.example.demo.employee.model.dto.Employee;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/calendar")
 @RequiredArgsConstructor 
 @CrossOrigin(origins = "https://localhost:5173")
+@Slf4j
 public class CalendarController {
 
     private final CalendarService calendarService;
-
-    // ==========================================
+    
     // 1. 일정(Event)
-    // ==========================================
 
     @GetMapping 
     public List<CalendarDto> getEvents(
@@ -43,30 +44,52 @@ public class CalendarController {
     }
 
     @PostMapping 
-    public CalendarDto createEvent(@RequestBody CalendarDto dto) {
-        return calendarService.createEvent(dto);
+    public ResponseEntity<?> createEvent(@RequestBody CalendarDto dto) {
+        try {
+            
+            CalendarDto result = calendarService.createEvent(dto);
+            return ResponseEntity.ok(result);
+        } catch (SecurityException e) {
+            log.error("권한 없는 일정 등록 시도: {}", dto.getEmpNo());
+            return ResponseEntity.status(403).body("전사 일정은 관리자만 등록할 수 있습니다.");
+        } catch (Exception e) {
+            log.error("일정 등록 실패", e);
+            return ResponseEntity.status(500).body("일정 등록 실패");
+        }
     }
 
+    // 🔥 일정 수정 (권한 체크 추가)
     @PutMapping("/{id}")
-    public CalendarDto updateEvent(@PathVariable("id") Long id, @RequestBody CalendarDto dto) {
-        return calendarService.updateEvent(id, dto);
+    public ResponseEntity<?> updateEvent(@PathVariable("id") Long id, @RequestBody CalendarDto dto) {
+        try {
+            CalendarDto result = calendarService.updateEvent(id, dto);
+            return ResponseEntity.ok(result);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body("수정 권한이 없습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("수정 실패");
+        }
     }
 
+    // 🔥 일정 삭제 (권한 체크 추가)
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteEvent(@PathVariable("id") Long id,
-    						@RequestParam("empNo") String empNo) {
-    	try {
+    public ResponseEntity<String> deleteEvent(
+            @PathVariable("id") Long id,
+            @RequestParam("empNo") String empNo) { // 삭제 요청자 사번
+        try {
             calendarService.deleteEvent(id, empNo);
             return ResponseEntity.ok("삭제되었습니다.");
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body("삭제 권한이 없습니다."); // 403 Forbidden
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(403).body(e.getMessage()); // 권한 없음 에러 리턴
+            return ResponseEntity.status(404).body("일정을 찾을 수 없습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("삭제 중 오류 발생");
         }
     }
 
 
-    // ==========================================
     // 2. 카테고리(Category) 
-    // ==========================================
     
     // [GET] 카테고리 조회
     @GetMapping("/categories")
@@ -95,5 +118,7 @@ public class CalendarController {
     public void deleteCategory(@PathVariable("id") Long id) {
         calendarService.deleteCategory(id);
     }
+    
+
     
 }

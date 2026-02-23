@@ -1,4 +1,5 @@
 // src/components/modal/MyInfoModal.jsx
+// 내 정보 설정 모달
 import { useEffect, useMemo, useRef, useState } from "react";
 import DraggableModal from "./DraggableModal";
 import { axiosApi } from "../../api/axiosAPI";
@@ -8,14 +9,13 @@ import { Pencil, Save, Undo2, ImageUp } from "lucide-react";
 const userDefaultImg = "/image/user.png"
 
 /**
- * ✅ MyInfoModal (완성본)
+ *  MyInfoModal 
  * - 조회 기본
  * - 수정 토글 (이메일/닉네임/전화/자기소개)
  * - 변경된 값만 payload에 담아 저장
  * - 프로필 이미지 업로드(별도)
  * - 성공 시 authStore.user 갱신 → 헤더 즉시 반영
  *
- * ⚠️ API 엔드포인트만 프로젝트에 맞게 바꾸세요.
  */
 const API = {
   UPDATE_PROFILE: "/mypage/profile", // PUT: {empEmail, empNickname, empPhone, introduction}

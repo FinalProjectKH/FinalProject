@@ -1,6 +1,9 @@
 import {NavLink} from "react-router-dom";
 import { useState } from "react";
 import { ActiveOrg } from "../org/orgTree";
+import { useAuthStore } from "../../store/authStore";
+import AdminDropupMenu from "../modal/admin/AdminDropupMenu"
+import MessengerModal from "../modal/MessengerModal";
 import {
   Clock3,
   FileCheck2,
@@ -8,11 +11,28 @@ import {
   Mail,
   MessageSquareText,
   Settings,
+  Shield,
+  ClipboardList,
 } from "lucide-react";
+import HrEmployeeModal from "../modal/admin/HrEmployeeModal";
+import DraggableModal from "../modal/DraggableModal";
 
 const Sidebar = () => {
   const [orgOpen, setOrgOpen] = useState(false);
-  const [orgPos, setOrgPos] = useState({ x: 250, y: 200 });
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [orgPos, setOrgPos] = useState({ x: 250, y: 150 });
+
+  const [hrOpen, setHrOpen] = useState(false);
+  const [ipOpen, setIpOpen] = useState(false);
+  const onClose  =()=> setAdminOpen(false);
+
+
+  const user = useAuthStore((s) => s.user);
+
+  const isAdmin = user?.authorityLevel === 3;
+  const isManager = user?.authorityLevel >= 2;
+
+  const [messengerOpen, setMessengerOpen] = useState(false);
 
   return (
   <>
@@ -32,15 +52,64 @@ const Sidebar = () => {
 
         {/* menu */}
         <nav className="mt-2 px-5 space-y-1">
-          <MenuItem to = "/attendance" icon={<Clock3 size={20}  />} label="근태관리" />
+          <MenuItem to = "/attendance/my" icon={<Clock3 size={20}  />} label="근태관리" />
           <MenuItem  to = "/approval" icon={<FileCheck2 size={20} />} label="전자결재" />
           <MenuItem to = "/calendar" icon={<CalendarDays size={20} />} label="캘린더" />
-          <MenuItem icon={<Mail size={20} />} label="메신저" badge={3} onClick={() => setOrgOpen(true)}/>
+          <MenuItem icon={<Mail size={20} />} label="메신저" badge={3} onClick={() => setMessengerOpen(true)}/>
           <MenuItem icon={<MessageSquareText size={20} />} label="게시판" />
         </nav>
 
         {/* bottom */}
         <div className="mt-auto px-5 pb-6">
+          {/* ✅ 관리자일 때만 하단에 노출 */}
+          {isAdmin && (
+
+            <div className="relative">
+            <MenuItem
+              icon={<Shield size={18} />} // 아이콘 취향대로
+              label="관리자"
+              onClick={(e) => {
+                setAdminOpen(prev => !prev)
+                e.stopPropagation();
+              }}
+            />
+
+            {adminOpen && (
+            
+             <div className="absolute left-0 right-0 bottom-full mb-2 z-50">
+               <AdminDropupMenu  
+               onClose = { onClose } 
+               canHr = {isAdmin} 
+               canIp = {isManager}
+               onOpenHr={()=>{
+                setHrOpen(true);
+                setAdminOpen(false);
+              }}
+               />
+              </div>
+
+
+
+             )}
+            </div> 
+          )}
+
+
+         <HrEmployeeModal
+            open={hrOpen}
+            onClose={() => setHrOpen(false)}
+          />
+
+              
+
+          {isManager && (
+            <MenuItem
+              to="/boardAdmin"                 
+              icon={<ClipboardList size={18} />} 
+              label="게시판 관리"
+            />
+          )}
+
           <button className="group w-full flex items-center gap-3 rounded-xl px-3 py-3 text-white/80 hover:bg-white/10 transition">
             <Settings size={18} className="text-white/80" />
             <span className="text-sm">설정</span>
@@ -49,47 +118,15 @@ const Sidebar = () => {
       </div>
     </aside>
 
-
-      {orgOpen && (
-        <div className="fixed inset-0 z-50 pointer-events-none">
-          <div
-            className="fixed w-[420px] h-[520px] rounded-xl bg-white text-black p-4 shadow-xl pointer-events-auto"
-            style={{ left: orgPos.x, top: orgPos.y }}
-          >
-            {/* 드래그 핸들 */}
-            <div
-              className="flex justify-between items-center mb-3 cursor-move select-none"
-              onMouseDown={(e) => {
-                const startX = e.clientX;
-                const startY = e.clientY;
-                const { x, y } = orgPos;
-              
-                const onMove = (ev) => {
-                  setOrgPos({
-                    x: x + (ev.clientX - startX),
-                    y: y + (ev.clientY - startY),
-                  });
-                };
-              
-                const onUp = () => {
-                  window.removeEventListener("mousemove", onMove);
-                  window.removeEventListener("mouseup", onUp);
-                };
-              
-                window.addEventListener("mousemove", onMove);
-                window.addEventListener("mouseup", onUp);
-              }}
-            >
-              <h2 className="font-bold">조직도 (임시)</h2>
-              <button onClick={() => setOrgOpen(false)}>✕</button>
-            </div>
-            
-            <div className="h-[460px] overflow-y-auto text-sm text-gray-700">
-              <ActiveOrg/>
-            </div>
-          </div>
-        </div>
+      {messengerOpen && (
+        <MessengerModal
+  open={messengerOpen}
+  onClose={() => setMessengerOpen(false)}
+  initialPos={orgPos}
+  // 필요하면 모달 닫힐 때 pos 저장 로직도 추가 가능
+/>
       )}
+
    </> 
   );
 };

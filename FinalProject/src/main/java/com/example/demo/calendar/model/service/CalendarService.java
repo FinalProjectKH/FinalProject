@@ -24,6 +24,8 @@ public interface CalendarService {
 
 	void deleteEvent(Long id, String empNo);
 
+	String getOrCreateVacationCategoryId(String empNo);
+
 
 
 }

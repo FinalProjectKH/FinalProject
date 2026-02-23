@@ -45,4 +45,17 @@
 		AND E.EMP_DEL_FL = 'N'
    </select>
    
+   <select id="findPasswordByEmpNo" resultType="string">
+  SELECT EMP_PW
+  FROM EMPLOYEE
+  WHERE EMP_NO = #{empNo}
+	</select>
+
+	<update id="updatePassword">
+  UPDATE EMPLOYEE
+  SET EMP_PW = #{encPw}
+  WHERE EMP_NO = #{empNo}
+	</update>
+
+   
 </mapper>

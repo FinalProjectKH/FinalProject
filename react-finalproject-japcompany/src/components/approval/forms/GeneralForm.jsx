@@ -1,16 +1,18 @@
 import React from 'react';
 
-// props에 approvalLines 추가
-export default function GeneralForm({ data, onChange, approvalLines = [] }) {
+// 🔥 props에 loginMember, readOnly 추가
+export default function GeneralForm({ data, onChange, approvalLines = [], loginMember, readOnly }) {
   const today = new Date().toLocaleDateString('ko-KR', {
     year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short'
   });
 
-  // 1. 결재선 빈칸 채우기 로직 (최대 3명 결재로 가정)
+  // 🔥 기안일 로직: 데이터에 날짜가 있으면(상세조회) 그 날짜, 없으면(작성) 오늘 날짜
+  const writeDate = data.approvalDate || today;
+
   const maxApprovers = 3;
   const displayLines = [...approvalLines];
   while (displayLines.length < maxApprovers) {
-    displayLines.push(null); // 빈 자리는 null로 채움
+    displayLines.push(null);
   }
 
   return (
@@ -30,16 +32,18 @@ export default function GeneralForm({ data, onChange, approvalLines = [] }) {
               <table style={{ border: "1px solid black", width: "100%", borderCollapse: "collapse" }}>
                 <colgroup><col width="100" /><col /></colgroup>
                 <tbody>
-                  <tr><td style={styles.label}>문서번호</td><td style={styles.value}>자동채번</td></tr>
-                  <tr><td style={styles.label}>기안부서</td><td style={styles.value}>개발팀</td></tr>
-                  <tr><td style={styles.label}>기 안 일</td><td style={styles.value}>{today}</td></tr>
-                  <tr><td style={styles.label}>기 안 자</td><td style={styles.value}>김사원</td></tr>
+                  {/* 🔥 문서번호: 데이터 있으면 표시, 없으면 자동채번 */}
+                  <tr><td style={styles.label}>문서번호</td><td style={styles.value}>{data.docNo || '자동채번'}</td></tr>
+                  <tr><td style={styles.label}>기안부서</td><td style={styles.value}>{loginMember?.deptName}</td></tr>
+                  {/* 🔥 기안일: writeDate 변수 사용 */}
+                  <tr><td style={styles.label}>기 안 일</td><td style={styles.value}>{writeDate}</td></tr>
+                  <tr><td style={styles.label}>기 안 자</td><td style={styles.value}>{loginMember?.empName}</td></tr>
                   <tr><td style={styles.label}>보존연한</td><td style={styles.value}>5년</td></tr>
                 </tbody>
               </table>
             </td>
             
-            {/* 🔥 2. 결재선 동적 렌더링 영역 */}
+            {/* 결재선 */}
             <td style={{ verticalAlign: "bottom", paddingLeft: "10px", textAlign: "right" }}>
               <div style={{ display: "inline-flex", border: "1px solid black" }}>
                 <div style={{ width: "20px", background: "#f3f3f3", borderRight: "1px solid black", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", padding: "5px" }}>결<br/><br/>재</div>
@@ -47,17 +51,21 @@ export default function GeneralForm({ data, onChange, approvalLines = [] }) {
                 <div style={{ display: "flex" }}>
                   {/* 기안자 (고정) */}
                   <div style={{ width: "80px", borderRight: "1px solid black", display: "flex", flexDirection: "column" }}>
-                     <div style={styles.signHeader}>담당</div>
-                     <div style={styles.signName}>김사원</div>
-                     <div style={styles.signStatus}>기안</div>
+                      <div style={styles.signHeader}>담당</div>
+                      <div style={styles.signName}>{loginMember?.empName}</div>
+                      <div style={styles.signStatus}>기안</div>
                   </div>
 
-                  {/* 결재자들 (동적) */}
+                  {/* 결재자들 */}
                   {displayLines.map((approver, index) => (
                     <div key={index} style={{ width: "80px", borderRight: index === maxApprovers - 1 ? "none" : "1px solid black", display: "flex", flexDirection: "column" }}>
                        <div style={styles.signHeader}>{approver ? approver.rank : ''}</div>
                        <div style={styles.signName}>{approver ? approver.name : ''}</div>
-                       <div style={styles.signStatus}>{approver ? '미결' : ''}</div>
+                       <div style={styles.signStatus}>
+                           {approver && approver.appLineStatus === 'W' && '미결'}
+                           {approver && approver.appLineStatus === 'C' && <span style={{color:'blue'}}>승인</span>}
+                           {approver && approver.appLineStatus === 'R' && <span style={{color:'red'}}>반려</span>}
+                       </div>
                     </div>
                   ))}
                 </div>
@@ -72,19 +80,30 @@ export default function GeneralForm({ data, onChange, approvalLines = [] }) {
         <colgroup><col width="120" /><col width="680" /></colgroup>
         <tbody>
           <tr>
-            <td style={styles.label}>참 조</td>
-            <td style={styles.inputCell}><input type="text" style={styles.input} placeholder="참조자 입력" /></td>
-          </tr>
-          <tr>
             <td style={styles.label}>제 목</td>
             <td style={styles.inputCell}>
-              <input type="text" name="title" value={data.title} onChange={onChange} style={{...styles.input, fontWeight:'bold'}} placeholder="제목을 입력하세요" />
+              <input 
+                type="text" 
+                name="approvalTitle" 
+                value={data.approvalTitle || ''} 
+                onChange={onChange} 
+                disabled={readOnly} /* 🔥 상세조회 시 수정 불가 */
+                style={{...styles.input, fontWeight:'bold'}} 
+                placeholder="제목을 입력하세요" 
+              />
             </td>
           </tr>
           <tr><td style={styles.label} colSpan={2}>상&nbsp;&nbsp;세&nbsp;&nbsp;내&nbsp;&nbsp;용</td></tr>
           <tr>
-            <td colSpan={2} style={{ padding: "15px", border: "1px solid black", height: "400px", verticalAlign: "top" }}>
-              <textarea name="content" value={data.content} onChange={onChange} style={{ width: "100%", height: "100%", border: "none", outline: "none", resize: "none" }} placeholder="내용을 입력하세요." />
+            <td colSpan={2} style={{ padding: "15px", border: "1px solid black", height: "600px", verticalAlign: "top" }}>
+              <textarea 
+                name="approvalContent" 
+                value={data.approvalContent || ''} 
+                onChange={onChange} 
+                disabled={readOnly} /* 🔥 상세조회 시 수정 불가 */
+                style={{ width: "100%", height: "100%", border: "none", outline: "none", resize: "none" }} 
+                placeholder="내용을 입력하세요." 
+              />
             </td>
           </tr>
         </tbody>
