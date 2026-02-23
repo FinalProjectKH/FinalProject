@@ -13,10 +13,8 @@ export default function ApprovalWrite() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // 수정 모드일 때 docNo 가져오기
   const editDocNo = location.state?.docNo || searchParams.get('docNo');
 
-  // 상태 관리
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showLineModal, setShowLineModal] = useState(false);
   const [loginMember, setLoginMember] = useState(null);
@@ -24,7 +22,9 @@ export default function ApprovalWrite() {
   const [selectedFiles, setSelectedFiles] = useState([]); 
   const fileInputRef = useRef(null); 
 
-  // 초기 데이터 구조
+  // 🔥 VITE 환경 변수 가져오기
+  const API_URL = import.meta.env.VITE_BASE_URL;
+
   const initialFormData = {
     docNo: '', 
     approvalTitle: '', 
@@ -42,7 +42,8 @@ export default function ApprovalWrite() {
 
   // 1. 내 정보 가져오기
   useEffect(() => {
-    fetch("/employee/myInfo", { method: "GET" })
+    // 🔥 API 주소 수정 및 credentials 추가
+    fetch(`${API_URL}/employee/myInfo`, { method: "GET", credentials: 'include' })
     .then(res => {
         if(res.status === 401) {
             alert("로그인 세션이 만료되었습니다.");
@@ -66,9 +67,8 @@ export default function ApprovalWrite() {
   // 3. 데이터 로드 (수정 모드일 때)
   useEffect(() => {
     if (editDocNo && loginMember?.empNo) {
-      console.log("데이터 로드 시작: ", editDocNo);
-
-      fetch(`/api/approval/view/${editDocNo}?empNo=${loginMember.empNo}`)
+      // 🔥 API 주소 수정 및 credentials 추가
+      fetch(`${API_URL}/api/approval/view/${editDocNo}?empNo=${loginMember.empNo}`, { credentials: 'include' })
         .then(res => {
             if (!res.ok) throw new Error("데이터 로드 실패");
             return res.json();
@@ -82,7 +82,6 @@ export default function ApprovalWrite() {
                 approvalTitle: approval.approvalTitle || '', 
                 approvalContent: approval.approvalContent || '',
                 
-                // 결재선 매핑
                 approvalLineList: lines ? lines.map(line => ({
                     approverNo: line.approverNo,
                     name: line.empName,
@@ -92,13 +91,11 @@ export default function ApprovalWrite() {
                     appLineStatus: line.appLineStatus
                 })) : [],
 
-                // 휴가 데이터 매핑
                 vacationType: vacation?.vacationType || approval.vacationType || '연차',
                 startDate: vacation?.startDate || approval.startDate || '',
                 endDate: vacation?.endDate || approval.endDate || '',
                 totalUse: vacation?.totalUse || approval.totalUse || 0, 
 
-                // 지출 데이터 매핑
                 totalAmount: expense?.totalAmount || approval.totalAmount || 0,
                 expenseDetailList: expenseDetails || []
             });
@@ -107,27 +104,21 @@ export default function ApprovalWrite() {
     }
   }, [editDocNo, loginMember]);
 
-  // =================================================================
-  // 🔥🔥🔥 [핵심] 백엔드 API 연차 계산기 호출
-  // =================================================================
+  // 🔥 연차 계산기 API 호출
   useEffect(() => {
-    // 1. 필수 조건 체크: 휴가 양식이 아니거나 날짜가 하나라도 비어있으면 중단
     if (formId !== 'vacation' || !formData.startDate || !formData.endDate) {
         return;
     }
 
-    // 2. 백엔드 API 호출 (Debounce 적용)
     const timer = setTimeout(() => {
-        // ⚠️ [중요] 백엔드 @RequestParam 이름(start, end, type)과 정확히 일치해야 함
         const queryParams = new URLSearchParams({
             start: formData.startDate,
             end: formData.endDate,
             type: formData.vacationType
         }).toString();
 
-        console.log("🚀 연차 계산 요청:", queryParams);
-
-        fetch(`/api/approval/calculate-days?${queryParams}`)
+        // 🔥 API 주소 수정 및 credentials 추가
+        fetch(`${API_URL}/api/approval/calculate-days?${queryParams}`, { credentials: 'include' })
         .then(res => {
             if (!res.ok) {
                 console.error("계산 API 호출 실패");
@@ -136,18 +127,15 @@ export default function ApprovalWrite() {
             return res.json();
         })
         .then(days => {
-            console.log(`✅ 계산된 일수: ${days}일`);
             setFormData(prev => ({ ...prev, totalUse: days }));
         })
         .catch(err => {
             console.error("연차 계산 중 오류 발생:", err);
-            // 에러 발생 시 0으로 초기화
             setFormData(prev => ({ ...prev, totalUse: 0 }));
         });
-    }, 300); // 0.3초 딜레이 (사용자가 날짜를 빠르게 바꿀 때 과도한 요청 방지)
+    }, 300);
 
     return () => clearTimeout(timer);
-
   }, [formData.startDate, formData.endDate, formData.vacationType, formId]);
 
 
@@ -200,11 +188,9 @@ export default function ApprovalWrite() {
       retentionYear: 5,                
       approvalLineList: formData.approvalLineList,
       
-      // 지출결의서
       totalAmount: formId === 'expense' ? formData.totalAmount : 0,
       expenseDetailList: formId === 'expense' ? formData.expenseDetailList : [],
       
-      // 휴가신청서
       vacationType: formId === 'vacation' ? formData.vacationType : null,
       startDate: formId === 'vacation' ? formData.startDate : null,
       endDate: formId === 'vacation' ? formData.endDate : null,
@@ -219,7 +205,12 @@ export default function ApprovalWrite() {
     selectedFiles.forEach(file => sendFormData.append("files", file));
 
     try {
-      const response = await fetch("/api/approval/insert", { method: "POST", body: sendFormData });
+      // 🔥 API 주소 수정 및 credentials 추가
+      const response = await fetch(`${API_URL}/api/approval/insert`, { 
+          method: "POST", 
+          body: sendFormData,
+          credentials: 'include' 
+      });
       if (response.ok) {
         alert(isTemp ? "임시 저장되었습니다." : "성공적으로 상신되었습니다.");
         navigate(isTemp ? '/approval/temp' : '/approval/wait'); 
@@ -239,8 +230,6 @@ export default function ApprovalWrite() {
 
   if (!loginMember) return <div className="flex justify-center items-center h-screen">로딩중...</div>;
 
-  // 🔥 [핵심 수정] 렌더링 에러 해결을 위해 함수 호출 방식 제거
-  // 컴포넌트를 변수에 할당하여 태그로 사용
   const formKey = formData.docNo || "init";
   
   const commonProps = {
@@ -262,7 +251,6 @@ export default function ApprovalWrite() {
     <div className="bg-gray-100 min-h-screen py-8 flex justify-center overflow-y-auto relative">
       <div className="bg-white w-[900px] shadow-xl border border-gray-300 flex flex-col min-h-[1100px] relative z-0">
         
-        {/* 상단 툴바 */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 sticky top-0 z-10">
            <div className="flex gap-2">
               <button onClick={() => handleSubmit(false)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-sm text-sm font-medium">
@@ -279,17 +267,14 @@ export default function ApprovalWrite() {
               </button>
            </div>
            <div className="text-sm text-gray-500 font-medium">
-                전자결재 &gt; {editDocNo ? "문서 수정" : "기안작성"}
+               전자결재 &gt; {editDocNo ? "문서 수정" : "기안작성"}
            </div>
         </div>
 
-        {/* 양식 영역 */}
         <div className="p-8 flex-1 flex justify-center">
-            {/* 🔥 함수 호출 대신 컴포넌트 변수 사용 */}
             <CurrentForm key={formKey} {...commonProps} />
         </div>
         
-        {/* 파일 첨부 영역 */}
          <div className="px-10 pb-10">
           <div className="border border-gray-300 rounded p-4 bg-gray-50">
              <div className="flex items-center gap-2 mb-3">
