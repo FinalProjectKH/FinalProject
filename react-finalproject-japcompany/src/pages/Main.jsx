@@ -4,11 +4,12 @@ import { Clock, LogIn, LogOut, Heart, MessageCircle, Sun, Cloud, CloudSun, Cloud
 import { axiosApi } from "../api/axiosAPI";
 import { useAttendance } from "../contexts/AttendanceContext";
 import { useAuthStore } from "../store/authStore";
+import MainCalendarCard from "../components/calendar/MainCalendarCard";
 
 const Card = ({ title, right, children, className = "" }) => (
   <section className={`rounded-2xl border border-white/20 p-5 ${className}`}>
     <div className="flex items-center justify-between mb-3">
-      <div className="text-[13px] font-semibold text-black/75">{title}</div>
+      <div className="text-[13px] font-semibold text-black/60">{title}</div>
       {right ? <div className="text-[12px] text-black/55">{right}</div> : <div />}
     </div>
     {children}
@@ -24,6 +25,9 @@ export default function Main() {
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [weather, setWeather] = useState(null);
   const [weatherDays, setWeatherDays] = useState([]);
+
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
 
   const weatherView = ({ sky, pty }) => {
     // 강수 우선
@@ -234,10 +238,10 @@ export default function Main() {
           </div>
         
 
-            <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6">
           {/* 캘린더(자리) */}
-          <Card title="캘린더" right="Sep 2025" className="bg-[#f6f2ed]/60 border-[#e5ddd5]/30 backdrop-blur shadow-md shadow-black/10">
-            <div className="rounded-2xl bg-white/20 border border-white/25 p-4 shadow-md shadow-black/5">
+          {/* <Card title="캘린더" right="Sep 2025" className="bg-[#f6f2ed]/60 border-[#e5ddd5]/30 backdrop-blur shadow-md shadow-black/10 ">
+             <div className="rounded-2xl bg-white/20 border border-white/25 p-4 shadow-md shadow-black/5">
               <div className="grid grid-cols-7 gap-2 text-center text-[11px] text-black/45 mb-2">
                 {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
                   <div key={d}>{d}</div>
@@ -267,10 +271,15 @@ export default function Main() {
               <div className="mt-3 text-[12px] text-black/55">
                 선택 날짜: <span className="font-semibold text-black/75">{selectedDate}일</span>
               </div>
+             </div>
+          </Card> */}
 
-              {/* ✅ 나중에 @toast-ui/calendar 붙일 자리 */}
-              {/* <div id="tui-calendar" className="mt-4 h-[240px]" /> */}
-            </div>
+          <Card
+            title="캘린더"
+            right={`${currentYear}년 ${currentMonth}월`}
+            className="bg-[#f6f2ed]/60 border-[#e5ddd5]/30 backdrop-blur shadow-md shadow-black/10"
+          >
+          <MainCalendarCard empNo={user?.empNo} deptCode={user?.deptCode}/>
           </Card>
 
           {/* 최근 메시지 */}
@@ -314,7 +323,7 @@ export default function Main() {
         {/* 우측 패널 */}
         <aside className="hidden xl:block">
           <section className="rounded-2xl border bg-[#f6f2ed]/30 border-[#e5ddd5]/30 backdrop-blur p-5 sticky top-6 min-h-[557px] shadow-md shadow-black/10">
-            <div className="text-[13px] font-semibold text-black/75 mb-3">요약 패널</div>
+            <div className="text-[13px] font-semibold text-black/60 mb-3">요약 패널</div>
 
             <div className="rounded-2xl bg-[#3a1f14]/70 text-white p-4 min-h-[485px] shadow-md shadow-black/20">
               <div className="flex items-center justify-between">
@@ -356,10 +365,10 @@ export default function Main() {
                         <div className="flex items-center gap-3">
                           <DIcon size={icon} />
                           <div>
-                            <div className="text-[12px] font-semibold">
+                            <div className="text-[15px] font-semibold">
                               {dayText} <span className="ml-2 text-[11px] opacity-80">{DLabel}</span>
                             </div>
-                            <div className="text-[11px] opacity-75">{d.date}</div>
+                            <div className="text-[9px] opacity-35">{d.date}</div>
                           </div>
                         </div>
                     
