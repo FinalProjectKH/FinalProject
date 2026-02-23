@@ -50,7 +50,7 @@ public class WebSecurityConfig {
         // Vercel 주소와 로컬 주소 모두 허용!
         configuration.setAllowedOriginPatterns(Arrays.asList(
             "http://localhost:5173", 
-            "https://final-project-three-sage.vercel.app/"
+            "https://final-project-three-sage.vercel.app"
         )); 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
