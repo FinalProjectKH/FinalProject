@@ -14,6 +14,9 @@ export default function ApprovalDocList() {
   const [page, setPage] = useState(1);       // 현재 페이지
   const [pagination, setPagination] = useState(null); // 페이징 메타데이터
 
+  // 🔥 VITE 환경 변수 가져오기
+  const API_URL = import.meta.env.VITE_BASE_URL;
+
   // 1. 현재 페이지 상태 체크
   const isApproveBox = location.pathname.includes('/approve'); 
   const isDraftOrTemp = location.pathname.includes('draft') || location.pathname.includes('temp'); 
@@ -35,7 +38,8 @@ export default function ApprovalDocList() {
 
   // 내 정보 가져오기
   useEffect(() => {
-    fetch('/employee/myInfo')
+    // 🔥 백엔드 주소 및 credentials 설정 추가
+    fetch(`${API_URL}/employee/myInfo`, { credentials: 'include' })
       .then(res => res.json())
       .then(member => {
         if (member && member.empNo) setEmpNo(member.empNo);
@@ -55,14 +59,13 @@ export default function ApprovalDocList() {
     setLoading(true);
     const apiType = getApiEndpoint(location.pathname);
 
-    //  page 파라미터 추가
-    fetch(`/api/approval/${apiType}?empNo=${empNo}&page=${page}`)
+    // 🔥 백엔드 주소 및 credentials 설정 추가
+    fetch(`${API_URL}/api/approval/${apiType}?empNo=${empNo}&page=${page}`, { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error('조회 실패');
         return res.json();
       })
       .then(data => {
-        //  백엔드 응답 구조 변경 대응 (Map -> list, pagination)
         if (data) {
             setDocList(data.list || []); 
             setPagination(data.pagination || null);
@@ -77,7 +80,7 @@ export default function ApprovalDocList() {
         setDocList([]);
         setLoading(false);
       });
-  }, [location.pathname, empNo, page]); // 🔥 page가 바뀔 때마다 재실행
+  }, [location.pathname, empNo, page]); 
 
   // 뱃지 스타일
   const getStatusBadge = (status) => {
@@ -106,8 +109,7 @@ export default function ApprovalDocList() {
   };
 
   return (
-    <div className="flex flex-col gap-4"> {/* 페이지네이션 간격용 flex 컨테이너 */}
-        
+    <div className="flex flex-col gap-4"> 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden min-h-[500px]">
         <table className="w-full text-sm text-left text-gray-500 table-fixed">
             <thead className="bg-gray-50 text-gray-700 uppercase border-b">
@@ -117,9 +119,7 @@ export default function ApprovalDocList() {
                 <th className="px-6 py-3 w-32 text-center whitespace-nowrap">기안일</th>
                 
                 {isApproveBox && (
-                <th className="px-6 py-3 w-32 text-center text-blue-600 font-bold whitespace-nowrap">
-                    결재일
-                </th>
+                <th className="px-6 py-3 w-32 text-center text-blue-600 font-bold whitespace-nowrap">결재일</th>
                 )}
 
                 {!isDraftOrTemp && (
@@ -181,7 +181,6 @@ export default function ApprovalDocList() {
         </table>
         </div>
 
-        {/*  페이지네이션 컴포넌트 렌더링 */}
         {!loading && docList.length > 0 && pagination && (
             <Pagination 
                 pagination={pagination} 
