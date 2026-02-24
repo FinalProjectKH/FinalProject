@@ -3,7 +3,7 @@ import Calendar from '@toast-ui/calendar';
 import '@toast-ui/calendar/dist/toastui-calendar.min.css';
 import axios from 'axios';
 
-// 🧩 부품들 가져오기 (경로 확인해주세요!)
+// 🧩 부품들 가져오기 (경로 본인 프로젝트에 맞게 확인해주세요!)
 import CalendarSidebar from './CalendarSidebar';
 import CalendarHeader from './CalendarHeader';
 import EventModal from './EventModal';
@@ -23,15 +23,51 @@ const MEETING_ROOMS = [
   "화상 회의실"
 ];
 
+// 🔥 [핵심 1] Zustand 등으로 저장된 통짜 JSON에서 내 정보 빼오기 자동화 함수
+const getMyInfoFromStorage = () => {
+  let myEmpNo = "";
+  let myAuthLevel = 1;
+  let myDeptCode = "HR01";
+
+  if (typeof window !== "undefined") {
+    // 로컬 스토리지를 싹 뒤져서 state.user 객체가 있는 곳을 찾습니다.
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        try {
+          const item = localStorage.getItem(key);
+          if (item && item.includes('"state":{"user":')) {
+            const parsed = JSON.parse(item);
+            if (parsed?.state?.user?.empNo) {
+              myEmpNo = parsed.state.user.empNo;
+              myAuthLevel = parsed.state.user.authorityLevel || 1;
+              // 사장님은 부서가 null일 수 있으므로 기본값 설정
+              myDeptCode = parsed.state.user.deptCode || "HR01"; 
+              break;
+            }
+          }
+        } catch (e) { /* 무시 */ }
+      }
+    }
+    
+    // 만약 못 찾았다면 기존 방식으로 시도 (안전장치)
+    if (!myEmpNo) {
+      myEmpNo = localStorage.getItem("loginEmpNo") || "";
+      myAuthLevel = parseInt(localStorage.getItem("authorityLevel") || "1", 10);
+      myDeptCode = localStorage.getItem("loginDeptCode") || "HR01";
+    }
+  }
+  
+  return { myEmpNo, myAuthLevel, myDeptCode };
+};
+
 export default function CalendarPage() {
   // 📍 [Ref] DOM 요소 및 캘린더 인스턴스 연결
   const containerRef = useRef<HTMLDivElement>(null);
   const calendarInstance = useRef<Calendar | null>(null);
 
-  // 📍 [Auth] 로그인 정보
-  const myEmpNo = localStorage.getItem("loginEmpNo") || "";
-  const myAuthLevel = parseInt(localStorage.getItem("authorityLevel") || "1");
-  const myDeptCode = localStorage.getItem("loginDeptCode") || "HR01";
+  // 📍 [Auth] 로그인 정보 (🔥 위에서 만든 함수로 똑똑하게 가져옴!)
+  const { myEmpNo, myAuthLevel, myDeptCode } = getMyInfoFromStorage();
 
   // 📍 [State] 데이터 상태 관리
   const [currentDate, setCurrentDate] = useState<string>('');
@@ -63,20 +99,13 @@ export default function CalendarPage() {
     calendarInstance.current = new Calendar(containerRef.current, {
       defaultView: 'month',
       useFormPopup: false, 
-      
-      
       useDetailPopup: false, 
-      
       isReadOnly: false,
       usageStatistics: false,
       
       month: { 
           dayNames: ['일', '월', '화', '수', '목', '금', '토'],
-          
-          // 🔥 [핵심 수정 1] 4주짜리 달도 강제로 6줄로 고정! (비율 깨짐 방지)
           isAlways6Weeks: true, 
-          
-          // 🔥 [핵심 2] 한 칸에 보여줄 최대 개수 (넘치면 'more' 버튼 생김)
           visibleEventCount: 4, 
       },
       week: { dayNames: ['일', '월', '화', '수', '목', '금', '토'], taskView: false },
@@ -92,7 +121,6 @@ export default function CalendarPage() {
         return;
       }
 
-      // 기본 카테고리 선택 로직 (권한에 맞는 것 중 첫 번째)
       const defaultCal = currentCalendars.find(c => parseInt(c.category) <= myAuthLevel);
       const safeId = defaultCal ? defaultCal.id : currentCalendars[0].id; 
       
@@ -111,10 +139,8 @@ export default function CalendarPage() {
       calendarInstance.current?.clearGridSelections();
     });
 
-// (3) 일정 드래그로 수정 (권한 정보 추가 전송)
+    // (3) 일정 드래그로 수정
     calendarInstance.current.on('beforeUpdateEvent', ({ event, changes }) => {
-      console.log("🔥 드래그 이동 시도:", event.title);
-
       const toLocalISOString = (dateInput: any) => {
          const date = (dateInput && dateInput.toDate) ? dateInput.toDate() : new Date(dateInput);
          const offset = date.getTimezoneOffset() * 60000;
@@ -122,42 +148,31 @@ export default function CalendarPage() {
          return localDate.toISOString().slice(0, 16).replace('T', ' ') + ':00'; 
       };
 
-      // 🔥 [핵심] 변경된 데이터뿐만 아니라, "누가" 요청했는지도 같이 보냅니다.
       const updates: any = {
-          empNo: myEmpNo,      // 로그인한 사람 사번
-          deptCode: myDeptCode // 로그인한 사람 부서코드 (혹시 필요할까봐)
+          empNo: myEmpNo,
+          deptCode: myDeptCode 
       };
 
       if (changes.start) updates.calStartDt = toLocalISOString(changes.start);
       if (changes.end) updates.calEndDt = toLocalISOString(changes.end);
       if (changes.title) updates.calTitle = changes.title;
       
-      // 1. 일단 화면에서는 이동시킴 (사용자 경험을 위해)
       calendarInstance.current?.updateEvent(event.id, event.calendarId, changes);
 
-      // 2. 서버에 요청
       axios.put(`${API_BASE_URL}/${event.id}`, updates)
-        .then(() => {
-            console.log("✅ DB 업데이트 성공");
-        })
         .catch(err => {
-            console.error("❌ 업데이트 실패 (403 권한 없음 등):", err);
-            
-            // 3. 실패 시 경고창 띄우고
+            console.error("업데이트 실패:", err);
             if (err.response && err.response.status === 403) {
                 alert("본인의 일정만 수정할 수 있습니다! (또는 관리자 권한 필요)");
             } else {
                 alert("일정 이동 실패!");
             }
-
-            // 4. 강제로 원래 위치로 되돌림 (롤백)
-            loadEvents(); 
+            loadEvents(); // 롤백
         });
     });
 
     // (4) 일정 클릭 -> 모달 열기 (상세보기/수정)
     calendarInstance.current.on('clickEvent', ({ event }) => {
-      // 팝업 내부의 '편집' 버튼 등을 눌렀을 때도 동작할 수 있음
       setModalValues({
           id: String(event.id),
           calendarId: String(event.calendarId),
@@ -168,7 +183,7 @@ export default function CalendarPage() {
           end: event.end.toDate(),
           isAllday: event.isAllday || false,
           isPrivate: event.raw?.openYn === 'N',
-          type: '1', // 나중에 modal 내부 useEffect에서 calendarId로 자동 매칭됨
+          type: '1', 
       });
       setIsModalOpen(true);
     });
@@ -291,8 +306,12 @@ export default function CalendarPage() {
     }).catch(err => alert("카테고리 추가 실패!"));
   };
 
+  // 🔥 [핵심 2] 색상 변경 시 500 에러 해결 (ownerEmpNo 추가)
   const handleColorChange = (id: any, newColor: any) => {
-      axios.put(`${CATEGORY_API_URL}/${id}`, { color: newColor }).then(() => {
+      axios.put(`${CATEGORY_API_URL}/${id}`, { 
+          color: newColor,
+          ownerEmpNo: myEmpNo 
+      }).then(() => {
           loadCategories(); 
       }).catch(err => alert("색상 변경 실패: " + err));
   };
@@ -304,9 +323,13 @@ export default function CalendarPage() {
       }).catch(err => alert("삭제 실패: " + err));
   };
 
+  // 🔥 [핵심 3] 이름 변경 시 500 에러 해결 (ownerEmpNo 추가)
   const handleRenameCategory = (id: string, newName: string) => {
     if (!newName.trim()) return;
-    axios.put(`${CATEGORY_API_URL}/${id}`, { name: newName }).then(() => {
+    axios.put(`${CATEGORY_API_URL}/${id}`, { 
+        name: newName,
+        ownerEmpNo: myEmpNo 
+    }).then(() => {
         loadCategories();
     }).catch(err => alert("이름 수정 실패: " + err));
   };
@@ -315,7 +338,6 @@ export default function CalendarPage() {
     if (!modalValues.title.trim()) return alert("제목을 입력하세요.");
     if (!myEmpNo) return alert("로그인 정보가 없습니다.");
 
-    // 🔥 [보안] 전사 캘린더 등록 제한 (프론트 1차 방어)
     if (modalValues.type === '3' && myAuthLevel < 3) {
         alert("전사 일정은 관리자만 등록할 수 있습니다.");
         return;
@@ -392,7 +414,6 @@ export default function CalendarPage() {
           onChangeView={handleChangeView}
         />
         
-        {/* 🔥 [핵심 3] 높이 설정: 화면 꽉 차게 (스크롤바 없이 깔끔함) */}
         <div className="flex-1 p-4 overflow-hidden relative">
            <div ref={containerRef} style={{ height: '100%' }} />
         </div>
