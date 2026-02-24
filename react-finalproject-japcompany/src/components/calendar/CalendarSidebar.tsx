@@ -320,36 +320,42 @@ export default function CalendarSidebar({
 
   
 
-    return (
-        // 🔥 [수정] pb-40 추가: 아래에 여유 공간을 줘서 팝업이 잘리지 않고 스크롤 가능하게 함
-    <aside className="w-64 border-r border-gray-200 p-4 flex flex-col bg-white overflow-y-auto h-full">
-      <h1 
-        className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors"
-        onClick={() => window.location.reload()}
-        title="새로고침"
-      >
-        📅 캘린더
-      </h1>
-
-      <SidebarGroup title="내 캘린더" GroupId="1" items={calendars.filter(c => String(c.category) === '1')} {...groupProps} />
-      <SidebarGroup title="부서 캘린더" GroupId="2" items={calendars.filter(c => String(c.category) === '2')} {...groupProps} />
+return (
+    // 🔥 1. aside에 있던 overflow-y-auto를 빼고 전체 높이를 꽉 채웁니다.
+    <aside className="w-64 border-r border-gray-200 flex flex-col bg-white h-full relative">
       
-<div className="border-t border-gray-100 pt-4 mt-2">
-        <SidebarGroup title="전사 캘린더" GroupId="3" items={calendars.filter(c => String(c.category) === '3')} {...groupProps} />
+      {/* 🔥 2. 이 영역(캘린더 목록)만 휠로 스크롤되도록 flex-1과 overflow-y-auto를 줍니다! */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <h1 
+          className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors"
+          onClick={() => window.location.reload()}
+          title="새로고침"
+        >
+          📅 캘린더
+        </h1>
+
+        <SidebarGroup title="내 캘린더" GroupId="1" items={calendars.filter(c => String(c.category) === '1')} {...groupProps} />
+        <SidebarGroup title="부서 캘린더" GroupId="2" items={calendars.filter(c => String(c.category) === '2')} {...groupProps} />
+        
+        <div className="border-t border-gray-100 pt-4 mt-2 mb-2">
+          <SidebarGroup title="전사 캘린더" GroupId="3" items={calendars.filter(c => String(c.category) === '3')} {...groupProps} />
+        </div>
       </div>
 
-      {/* 🚀 빡쳐서 권한 체크 날려버림! 무조건 버튼 노출! */}
-      <div className="mt-auto pt-4 border-t border-gray-200">
-          <button 
-              onClick={handleSyncHolidays}
-              className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded flex items-center justify-center gap-2 transition-colors"
-          >
-              🔄 공휴일 데이터 가져오기
-          </button>
-          <p className="text-[10px] text-gray-400 text-center mt-1">
-              *공휴일 동기화 기능
-          </p>
-      </div>
+      {/* 🔥 3. 버튼은 스크롤에 안 밀리고 맨 밑바닥에 딱 고정! (shrink-0 추가) */}
+      {Number(authLevel) === 3 && (
+        <div className="shrink-0 p-4 border-t border-gray-200 bg-gray-50">
+            <button 
+                onClick={handleSyncHolidays}
+                className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded flex items-center justify-center gap-2 transition-colors shadow-sm"
+            >
+                🔄 공휴일 데이터 가져오기
+            </button>
+            <p className="text-[10px] text-gray-400 text-center mt-2">
+                *관리자(Lv.3) 전용 기능
+            </p>
+        </div>
+      )}
 
     </aside>
   );
