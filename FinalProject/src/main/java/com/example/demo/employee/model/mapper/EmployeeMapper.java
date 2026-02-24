@@ -14,4 +14,6 @@ public interface EmployeeMapper {
 
 	int updatePassword(@Param("empNo") String empNo,@Param("encPw") String encodedPw);
 	
+	// 이 줄을 추가해 주세요!
+	LoginMemberDTO findByEmpNo(String empNo);
 }

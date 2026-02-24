@@ -56,6 +56,32 @@
   SET EMP_PW = #{encPw}
   WHERE EMP_NO = #{empNo}
 	</update>
+	
+	<select id="findByEmpNo" parameterType="string" resultType="com.example.demo.employee.model.dto.LoginMemberDTO">
+        SELECT
+        E.EMP_NO,
+        E.EMP_NAME,
+        E.EMP_ID,
+        E.EMP_PW,
+        E.DEPT_CODE,
+        E.POSITION_CODE,
+        E.EMP_EMAIL,
+        E.EMP_NICKNAME,
+        E.EMP_PHONE,
+        TO_CHAR(E.ENROLL_DATE, 'YYYY-MM-DD') AS ENROLL_DATE,
+        E.EMP_DEL_FL,
+        E.INTRODUCTION,
+        E.PROFILE_IMG,
+        P.POSITION_NAME,
+        P.AUTHORITY_LEVEL,
+        D.DEPT_NAME,
+        D.PARENT_DEPT_CODE
+        FROM EMPLOYEE E
+        JOIN POSITION P ON E.POSITION_CODE = P.POSITION_CODE
+        LEFT JOIN DEPARTMENT D ON E.DEPT_CODE = D.DEPT_CODE
+        WHERE E.EMP_NO = #{empNo}
+        AND E.EMP_DEL_FL = 'N'
+    </select>
 
    
 </mapper>
