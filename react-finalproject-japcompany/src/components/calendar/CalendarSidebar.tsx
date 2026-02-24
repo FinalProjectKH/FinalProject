@@ -281,7 +281,7 @@ export default function CalendarSidebar({
 
   // 🔥 공휴일 가져오기 함수 수정
   const handleSyncHolidays = () => {
-    if(authLevel !== 3){
+    if(Number(authLevel) !== 3){
       alert("관리자만 실행할 수 있습니다.");
       return; // 권한 없으면 여기서 함수 종료!
     }
@@ -338,7 +338,7 @@ export default function CalendarSidebar({
         <SidebarGroup title="전사 캘린더" GroupId="3" items={calendars.filter(c => String(c.category) === '3')} {...groupProps} />
       </div>
 
-      {authLevel === 3 && (
+      {Number(authLevel) === 3 && (
         <div className="mt-auto pt-4 border-t border-gray-200">
             <button 
                 onClick={handleSyncHolidays}
