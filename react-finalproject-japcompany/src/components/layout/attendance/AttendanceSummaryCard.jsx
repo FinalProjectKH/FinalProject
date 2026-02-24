@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "../../../store/authStore";
 import { axiosApi } from "../../../api/axiosAPI";
 
-const AttendanceSummaryCard = () => {
+const AttendanceSummaryCard = ({ onTodayChange }) => {
   const { user, refreshTrigger } = useAuthStore();
 
   const [summary, setSummary] = useState({
@@ -35,6 +35,56 @@ const AttendanceSummaryCard = () => {
           console.log("검거된 데이터:", data);
 
           if (Array.isArray(data)) {
+
+////////////////////////////////////////////////////////////////세현
+
+const todayStr = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+// 백엔드에 날짜 필드명이 workDate / date 등 뭐든 있을 수 있어서 안전하게 처리
+const todayRecord =
+  data.find(r => String(r.workDate || r.date || "").startsWith(todayStr)) ||
+  data.find(r => String(r.startTime || "").startsWith(todayStr));
+
+const toHHMMSS = (isoLike) => {
+  if (!isoLike) return null;
+  // "2026-02-22T08:59:23.000" 같은 문자열 가정
+  const t = isoLike.split("T")[1];
+  if (!t) return null;
+  return t.split(".")[0]; // "08:59:23"
+};
+
+const minutesToHHMMSS = (mins) => {
+  const totalSec = Math.max(0, Math.floor(Number(mins || 0) * 60));
+  const hh = String(Math.floor(totalSec / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
+  const ss = String(totalSec % 60).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+};
+
+// 오늘 표시용 데이터 만들기
+if (typeof onTodayChange === "function") {
+  if (!todayRecord) {
+    onTodayChange(null);
+  } else {
+    const startText = toHHMMSS(todayRecord.startTime);
+
+    // workMinutes 있으면 그걸 최우선으로 사용(가장 정확)
+    const workedText =
+      todayRecord.workMinutes != null
+        ? minutesToHHMMSS(todayRecord.workMinutes)
+        : null;
+
+    // endTime이 있으면 "오늘 근무"로, 없으면 "출근 시간"으로 표시하도록 정보 전달
+    onTodayChange({
+      startText,
+      workedText,
+      hasEnd: Boolean(todayRecord.endTime),
+    });
+  }
+}
+
+////////////////////////////////////////////////////////////////세현
+
             let totalMinutes = 0;
             let workedDays = 0;
 

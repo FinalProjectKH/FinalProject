@@ -1,10 +1,11 @@
 // src/components/attendance/AttendanceMain.jsx
+import { useState } from "react";
 import AttendanceSummaryCard from "./AttendanceSummaryCard";
 // 아래 카드는 다음 단계에서 만들 예정 (일단 자리만 잡음)
 import AttendanceWeeklyList from "./AttendanceWeeklyList";
 
 const AttendanceMain = () => {
-
+  const [todayAttendance, setTodayAttendance] = useState(null);
   return (
 
     <section
@@ -18,8 +19,8 @@ const AttendanceMain = () => {
       "
       aria-label="근태관리 메인 콘텐츠"
     >
-      {/* 위 카드 */}
-      <AttendanceSummaryCard />
+      {/* 위 카드 (세현 추가: "onTodayChange={setTodayAttendance}") */}
+      <AttendanceSummaryCard onTodayChange={setTodayAttendance}/>
 
       {/* 아래 카드 (다음 단계) */}
       <AttendanceWeeklyList />

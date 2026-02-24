@@ -11,7 +11,8 @@ import org.springframework.context.annotation.PropertySource;
 			 "com.example.demo.org.model.mapper",
 			 "com.example.demo.mypage.model.mapper",
 			 "com.example.demo.admin.modal.mapper",
-			 "com.example.demo.approval.model.mapper"})
+			 "com.example.demo.approval.model.mapper",
+			 "com.example.demo.messenger.model.mapper"})
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
 @PropertySource("classpath:config.properties")
 public class FinalProjectApplication {
@@ -19,5 +20,4 @@ public class FinalProjectApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(FinalProjectApplication.class, args);
 	}
-
 }

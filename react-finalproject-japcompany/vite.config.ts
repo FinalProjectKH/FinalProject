@@ -37,6 +37,14 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_BASE_URL || 'http://localhost',
           changeOrigin: true,
         },
+        "/dm": {
+          target: env.VITE_BASE_URL || 'http://localhost',
+          changeOrigin: true,
+        },
+        "/chattingSock": {
+          target: env.VITE_BASE_URL || 'http://localhost',
+          changeOrigin: true,
+        },
       },
     },
   };

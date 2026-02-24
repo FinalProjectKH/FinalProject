@@ -1,3 +1,4 @@
+
 /* @import "tailwindcss"; */
 
 @tailwind base;
@@ -22,3 +23,96 @@
   background: rgba(0, 0, 0, 0.4);
 }
 
+/* 캘린더 기본 배경 */
+.toastui-calendar-month { background-color: transparent !important; }
+.toastui-calendar-month-daygrid-cell {
+  background: rgba(246, 242, 237, 0.35) !important;
+  border: 1px solid rgba(229, 221, 213, 0.3) !important;
+  position: relative !important;
+}
+
+/* 날짜 숫자 & 오늘 표시 스타일 (합침) */
+.toastui-calendar-weekday-grid-date {
+  position: absolute !important;
+  top: 2px !important;
+  left: 4px !important;
+  font-size: 9px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  z-index: 5;
+}
+
+.toastui-calendar-weekday-grid-date-decorator {
+  position: absolute !important;
+  top: 2px !important;
+  left: 1px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #6b3f2a, #3a1f14) !important;
+  color: white !important;
+  font-size: 10px !important;
+  z-index: 4;
+}
+
+/* 이벤트 점들이 들어가는 박스 최적화 */
+/* .toastui-calendar-month-daygrid-event-wrapper {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  position: absolute !important;
+  top: 4px !important;    
+  left: 22px !important;  
+  width: calc(100% - 25px) !important;
+  background: none !important;
+  border: none !important;
+  z-index: 10 !important;  
+} */
+
+/* 기존 막대 스타일 제거 + 높이 초기화 */
+/* .toastui-calendar-weekday-grid-event {
+  display: inline-block !important;
+  width: 4px !important;
+  height: 4px !important;
+  border-radius: 9999px !important;
+  padding: 0 !important;
+  margin: 0 2px !important;
+  background: none !important;
+  border: none !important;
+  height: auto !important; 
+} */
+
+/* 추가: N more 버튼 완전 차단 */
+/* .toastui-calendar-weekday-grid-more-events {
+  display: none !important;
+} */
+
+/* ✅ 텍스트는 숨김(점만 보이게) */
+/* .toastui-calendar-weekday-grid-event-title,
+.toastui-calendar-weekday-grid-event-time {
+  display: none !important;
+} */
+
+/* .toastui-calendar-weekday-grid-event {
+  background-color: currentColor !important; 
+  background-color: rgba(107, 63, 42, 0.9) !important; 
+} */
+
+/* ✅ 이벤트가 셀 밖으로 튀어나오지 못하게(칸 늘어짐 체감 해결) */
+/* .toastui-calendar-month-week-item,
+.toastui-calendar-weekday,
+.toastui-calendar-weekday-grid,
+.toastui-calendar-daygrid-cell {
+  overflow: hidden !important;
+  min-height: 0 !important;
+} */
+
+/* ✅ 헤더/콘텐츠 영역도 튀는 것 차단 */
+/* .toastui-calendar-grid-cell-content {
+  overflow: hidden !important;
+  min-height: 0 !important;
+} */
+ 
