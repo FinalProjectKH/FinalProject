@@ -83,8 +83,7 @@ export default function MainCalendarCard({ empNo, deptCode }) {
 
     // 2) 이벤트 다시 그림
     cal.clear();
-    const created = cal.createEvents(
-      events.map((e) => {
+    const created = events.map((e) => {
         // console.log("변환 중인 이벤트 원본 데이터:", e);
         const d = toDate(e.calStartDt ?? e.start);
         const mappedEvent = {
@@ -101,8 +100,7 @@ export default function MainCalendarCard({ empNo, deptCode }) {
        };
       //  console.log("변환 완료된 데이터 (TUI용):", mappedEvent);
        return mappedEvent; // 반드시 return 해줘야 합니다!
-    })
-  );
+    });
 
   console.log("created count:", created?.length);
 

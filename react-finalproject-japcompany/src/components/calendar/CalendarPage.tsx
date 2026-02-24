@@ -178,6 +178,7 @@ export default function CalendarPage() {
 
     return () => {
       calendarInstance.current?.destroy();
+      calendarInstance.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
