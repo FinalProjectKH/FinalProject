@@ -2,6 +2,7 @@
 import { User, Users, Building2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAttendance } from "../../../contexts/AttendanceContext";
 
 const MenuItem = ({ to, icon, label }) => {
   const location = useLocation();
@@ -19,9 +20,10 @@ const MenuItem = ({ to, icon, label }) => {
   );
 };
 
-const RightSidebar = ({ width = 280, height = 612, onCheckIn, onCheckOut }) => {
+const RightSidebar = ({ width = 280, height = 612 }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentDate, setCurrentDate] = useState("");
+  const { handleCheckIn, handleCheckOut } = useAttendance();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -50,8 +52,8 @@ const RightSidebar = ({ width = 280, height = 612, onCheckIn, onCheckOut }) => {
           </div>
 
           <div className="flex gap-4 mb-8">
-            <button onClick={onCheckIn} className="flex-1 rounded-xl bg-[#5b2f1f] text-white py-4 font-bold shadow-lg active:scale-95 transition-transform">출 근</button>
-            <button onClick={onCheckOut} className="flex-1 rounded-xl bg-[#d37545] text-white py-4 font-bold shadow-lg active:scale-95 transition-transform">퇴 근</button>
+            <button onClick={handleCheckIn} className="flex-1 rounded-xl bg-[#5b2f1f] text-white py-4 font-bold shadow-lg active:scale-95 transition-transform">출 근</button>
+            <button onClick={handleCheckOut} className="flex-1 rounded-xl bg-[#d37545] text-white py-4 font-bold shadow-lg active:scale-95 transition-transform">퇴 근</button>
           </div>
 
           <nav className="space-y-2">

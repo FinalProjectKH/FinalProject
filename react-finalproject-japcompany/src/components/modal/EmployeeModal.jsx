@@ -5,7 +5,7 @@ import { useAuthStore } from "../../store/authStore";
 const userDefaultImg = "/image/user.png"
 
 
-const EmployeeModal = ({ open, onClose, employee }) => {
+const EmployeeModal = ({ open, onClose, employee, onStartDm }) => {
   const user = useAuthStore((state) => state.user );
 
   if (!open || !employee) return null;
@@ -61,7 +61,12 @@ const EmployeeModal = ({ open, onClose, employee }) => {
             <button className="flex-1 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">
               프로필 보기
             </button>
-            <button className="flex-1 rounded-lg bg-[#D37545] text-white px-3 py-2 text-sm hover:opacity-90">
+            <button 
+            className="flex-1 rounded-lg bg-[#D37545] text-white px-3 py-2 text-sm hover:opacity-90"
+            onClick={()=>{
+              onStartDm?.(employee.empNo);
+              onClose();
+            }}>
               메시지
             </button>
           </div>
