@@ -281,8 +281,7 @@ export default function CalendarSidebar({
 
   // 🔥 공휴일 가져오기 함수 수정
   const handleSyncHolidays = () => {
-    // 🔥 권한 1로 수정됨
-    if(authLevel !== 1){
+    if(authLevel !== 3){
       alert("관리자만 실행할 수 있습니다.");
       return; // 권한 없으면 여기서 함수 종료!
     }
