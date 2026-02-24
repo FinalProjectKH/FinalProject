@@ -44,9 +44,9 @@ export default function Main() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/weather/now?nx=60&ny=127");
-        const data = await res.json();
-        setWeather(data);
+        // 🔥 fetch 대신 axiosApi 사용
+        const res = await axiosApi.get("/api/weather/now?nx=60&ny=127");
+        setWeather(res.data); // axios는 응답을 .data에 담아줍니다
       } catch (e) {
         console.error("날씨 조회 실패", e);
       }
@@ -59,9 +59,9 @@ export default function Main() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/weather/3days?nx=60&ny=127");
-        const data = await res.json();
-        setWeatherDays(data); // 3개
+        // 🔥 fetch 대신 axiosApi 사용
+        const res = await axiosApi.get("/api/weather/3days?nx=60&ny=127");
+        setWeatherDays(res.data); // axios는 응답을 .data에 담아줍니다
       } catch (e) {
         console.error("3일 예보 조회 실패", e);
         setWeatherDays([]);
