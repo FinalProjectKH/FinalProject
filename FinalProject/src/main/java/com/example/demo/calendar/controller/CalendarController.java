@@ -39,7 +39,7 @@ public class CalendarController {
     @GetMapping 
     public List<CalendarDto> getEvents(
     		@RequestParam("empNo") String empNo,
-    		@RequestParam("deptCode") String deptCode) {
+    		@RequestParam(value = "deptCode", required = false) String deptCode) {
         return calendarService.findAllEvents(empNo, deptCode);
     }
 

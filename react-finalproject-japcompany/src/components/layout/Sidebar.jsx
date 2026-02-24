@@ -1,5 +1,5 @@
 import {NavLink} from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActiveOrg } from "../org/orgTree";
 import { useAuthStore } from "../../store/authStore";
 import AdminDropupMenu from "../modal/admin/AdminDropupMenu"
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import HrEmployeeModal from "../modal/admin/HrEmployeeModal";
 import DraggableModal from "../modal/DraggableModal";
+import { axiosApi } from "../../api/axiosAPI";
 
 const Sidebar = () => {
   const [orgOpen, setOrgOpen] = useState(false);
@@ -28,11 +29,24 @@ const Sidebar = () => {
 
 
   const user = useAuthStore((s) => s.user);
+  const isLogin = useAuthStore((s) => s.isLogin);
 
   const isAdmin = user?.authorityLevel === 3;
   const isManager = user?.authorityLevel >= 2;
 
   const [messengerOpen, setMessengerOpen] = useState(false);
+
+  const unreadCount = useAuthStore((s) => s.unreadCount);
+  const fetchUnreadCount = useAuthStore((s) => s.fetchUnreadCount);
+
+  useEffect(() => {
+     if (!isLogin) return;
+
+    fetchUnreadCount();
+    const id = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(id);
+  }, [isLogin, fetchUnreadCount]);
+
 
   return (
   <>
@@ -55,13 +69,13 @@ const Sidebar = () => {
           <MenuItem to = "/attendance/my" icon={<Clock3 size={20}  />} label="근태관리" />
           <MenuItem  to = "/approval" icon={<FileCheck2 size={20} />} label="전자결재" />
           <MenuItem to = "/calendar" icon={<CalendarDays size={20} />} label="캘린더" />
-          <MenuItem icon={<Mail size={20} />} label="메신저" badge={3} onClick={() => setMessengerOpen(true)}/>
+          <MenuItem icon={<Mail size={20} />} label="메신저" badge={unreadCount > 0 ? unreadCount : null} onClick={() => setMessengerOpen(true)}/>
           <MenuItem icon={<MessageSquareText size={20} />} label="게시판" />
         </nav>
 
         {/* bottom */}
         <div className="mt-auto px-5 pb-6">
-          {/* ✅ 관리자일 때만 하단에 노출 */}
+          {/* 관리자일 때만 하단에 노출 */}
           {isAdmin && (
 
             <div className="relative">
@@ -120,11 +134,10 @@ const Sidebar = () => {
 
       {messengerOpen && (
         <MessengerModal
-  open={messengerOpen}
-  onClose={() => setMessengerOpen(false)}
-  initialPos={orgPos}
-  // 필요하면 모달 닫힐 때 pos 저장 로직도 추가 가능
-/>
+          open={messengerOpen}
+          onClose={() => setMessengerOpen(false)}
+          initialPos={orgPos}
+        />
       )}
 
    </> 

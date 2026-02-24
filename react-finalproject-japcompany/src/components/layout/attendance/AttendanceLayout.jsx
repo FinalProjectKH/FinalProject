@@ -6,6 +6,7 @@ import RightSidebar from "./RightSidebar";
 import Sidebar from "../Sidebar";
 import { Outlet } from "react-router-dom";
 import { axiosApi } from "../../../api/axiosAPI";
+import { AttendanceContext } from "../../../contexts/AttendanceContext";
 
 const AttendanceLayout = () => {
   const { user, triggerRefresh } = useAuthStore();
@@ -105,6 +106,7 @@ const AttendanceLayout = () => {
 
           {/* 콘텐츠와 우측 사이드바를 감싸는 컨테이너 */}
           <div className="flex px-8 pb-8 gap-6 items-stretch">
+            <AttendanceContext.Provider value={{ handleCheckIn, handleCheckOut }}>
             {/* 중앙 대시보드 (Outlet) */}
             <div className="flex-[3] min-w-0">
               <Outlet />
@@ -112,12 +114,12 @@ const AttendanceLayout = () => {
 
             {/* 3. 우측 사이드바 (정보 패널) */}
             <div className="flex-[1] min-w-[300px]">
-              <RightSidebar 
-                onCheckIn={handleCheckIn} 
-                onCheckOut={handleCheckOut}
-              />
+              <RightSidebar/>
             </div>
+            </AttendanceContext.Provider>
           </div>
+          
+
         </div>
       </div>
     </div>
