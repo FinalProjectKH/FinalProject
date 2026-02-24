@@ -334,27 +334,22 @@ export default function CalendarSidebar({
       <SidebarGroup title="내 캘린더" GroupId="1" items={calendars.filter(c => String(c.category) === '1')} {...groupProps} />
       <SidebarGroup title="부서 캘린더" GroupId="2" items={calendars.filter(c => String(c.category) === '2')} {...groupProps} />
       
-      <div className="border-t border-gray-100 pt-4 mt-2">
+<div className="border-t border-gray-100 pt-4 mt-2">
         <SidebarGroup title="전사 캘린더" GroupId="3" items={calendars.filter(c => String(c.category) === '3')} {...groupProps} />
       </div>
 
-      {Number(authLevel) === 3 && (
-        <div className="mt-auto pt-4 border-t border-gray-200">
-            <button 
-                onClick={handleSyncHolidays}
-                className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded flex items-center justify-center gap-2 transition-colors"
-            >
-                🔄 공휴일 데이터 가져오기
-            </button>
-            <p className="text-[10px] text-gray-400 text-center mt-1">
-                *관리자(Lv.3) 전용 기능
-            </p>
-            <p className="text-[10px] text-gray-400 text-center mt-1">
-                3년 뒤 데이터는 가져오지 못합니다 !!
-            </p>
-        </div>
-    )}
-
+      {/* 🚀 빡쳐서 권한 체크 날려버림! 무조건 버튼 노출! */}
+      <div className="mt-auto pt-4 border-t border-gray-200">
+          <button 
+              onClick={handleSyncHolidays}
+              className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded flex items-center justify-center gap-2 transition-colors"
+          >
+              🔄 공휴일 데이터 가져오기
+          </button>
+          <p className="text-[10px] text-gray-400 text-center mt-1">
+              *공휴일 동기화 기능
+          </p>
+      </div>
 
     </aside>
   );
