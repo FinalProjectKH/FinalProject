@@ -11,11 +11,13 @@ export default function MessengerModal({
   width = 900,
   height = 560,
 }) {
-  const loginMember = useAuthStore((state) => state.user );
-
+  const loginMember = useAuthStore((state) => state.user);
   const myEmpNo = String(loginMember.empNo);
   
+  // 🔥 [수정] 훅(Hook)은 무조건 최상단에 있어야 안전합니다! activeRoomRef를 위로 끌어올림
   const wsRef = useRef(null);
+  const activeRoomRef = useRef(null);
+  const bottomRef = useRef(null);
 
   const [pos, setPos] = useState(initialPos);
 
@@ -32,13 +34,9 @@ export default function MessengerModal({
   //메시지
   const [messages, setMessages] = useState([]);
   
-  //자동 스크롤
-  const bottomRef = useRef(null);
-
   //메시지 안잃음
   const unreadCount = useAuthStore((s) => s.unreadCount);
   const fetchUnreadCount = useAuthStore((s) => s.fetchUnreadCount);
-
 
   // 드래그
   const onDragMouseDown = (e) => {
@@ -64,47 +62,43 @@ export default function MessengerModal({
 
   // 조직도에서 직원 클릭 -> DM 시작(방 찾거나 생성)
   const startDmWith = async(emp) => {
-    // emp는 최소 { empNo, empName } 형태라고 가정
     const empNo = emp?.empNo ?? emp?.EMP_NO ?? emp?.id;
     const empName = emp?.empName ?? emp?.EMP_NAME ?? emp?.name ?? "직원";
 
     if (!empNo) return;
     try {
-      
-    const res = await axiosApi.post("/dm", { peerEmpNo: empNo });
-    const { roomId } = res.data;
+      const res = await axiosApi.post("/dm", { peerEmpNo: empNo });
+      const { roomId } = res.data;
 
-    setRooms((prev) => {
-      const exists = prev.find((r) => r.roomId === roomId);
-      const now = Date.now();
+      setRooms((prev) => {
+        const exists = prev.find((r) => r.roomId === roomId);
+        const now = Date.now();
 
-      if (exists) {
-        // 기존 방이면 맨 위로 올리기(최근 대화 느낌)
-        const moved = prev
-          .map((r) => (r.roomId === roomId ? { ...r, updatedAt: now } : r))
-          .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
-        return moved;
-      }
+        if (exists) {
+          const moved = prev
+            .map((r) => (r.roomId === roomId ? { ...r, updatedAt: now } : r))
+            .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+          return moved;
+        }
 
-      // 신규 생성
-      const next = [
-        {
-          roomId,
-          peerEmpNo: empNo,
-          title: empName,
-          lastMessage: "",
-          unreadCount: 0,
-          updatedAt: now,
-          messages: [],
-        },
-        ...prev,
-      ];
-      return next;
-    });
+        const next = [
+          {
+            roomId,
+            peerEmpNo: empNo,
+            title: empName,
+            lastMessage: "",
+            unreadCount: 0,
+            updatedAt: now,
+            messages: [],
+          },
+          ...prev,
+        ];
+        return next;
+      });
 
-    setActiveRoomId(roomId);
-    setActiveTab("chats"); // A안 핵심: “닫기”가 아니라 “대화목록 탭으로 전환”
-        } catch (error) {
+      setActiveRoomId(roomId);
+      setActiveTab("chats"); 
+    } catch (error) {
       console.error("DM 생성 실패", error);
     }
   };
@@ -117,28 +111,30 @@ export default function MessengerModal({
   const lastReadAt = activeRoom?.lastReadAt ? new Date(activeRoom.lastReadAt) : new Date(0);
 
   useEffect(() => {
-  if (!activeRoomId) return;
+    activeRoomRef.current = activeRoomId;
+  }, [activeRoomId]);
 
-  const markRead = async () => {
-    try {
-      await axiosApi.post(`/dm/rooms/${activeRoomId}/read`);
+  useEffect(() => {
+    if (!activeRoomId) return;
 
-      // ✅ 메신저 방 목록의 뱃지(1) 즉시 제거
-      setRooms((prev) =>
-        prev.map((r) =>
-          r.roomId === activeRoomId ? { ...r, unreadCount: 0, lastReadAt: new Date().toISOString() } : r
-        )
-      );
+    const markRead = async () => {
+      try {
+        await axiosApi.post(`/dm/rooms/${activeRoomId}/read`);
 
-      // 사이드바 총 뱃지 갱신(fetchUnreadCount 재사용)
-      fetchUnreadCount?.();
-    } catch (e) {
-      console.error("읽음 처리 실패", e);
-    }
-  };
+        setRooms((prev) =>
+          prev.map((r) =>
+            r.roomId === activeRoomId ? { ...r, unreadCount: 0, lastReadAt: new Date().toISOString() } : r
+          )
+        );
 
-  markRead();
-}, [activeRoomId]);
+        fetchUnreadCount?.();
+      } catch (e) {
+        console.error("읽음 처리 실패", e);
+      }
+    };
+
+    markRead();
+  }, [activeRoomId, fetchUnreadCount]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "auto" });
@@ -148,8 +144,12 @@ export default function MessengerModal({
     if (!open) return;
 
     const fetchRooms = async () => {
-      const res = await axiosApi.get("/dm/rooms");
-      setRooms(res.data);
+      try {
+        const res = await axiosApi.get("/dm/rooms");
+        setRooms(res.data);
+      } catch (err) {
+        console.error("방 목록 로딩 실패", err);
+      }
     };
     fetchRooms();
   }, [open]);
@@ -162,26 +162,37 @@ export default function MessengerModal({
     } catch (error) {
       console.error("메시지 로딩 실패:", error);
     }
-  },[activeRoomId]);
+  }, [activeRoomId]);
 
   useEffect(() => {
     fetchMessages();
   }, [fetchMessages]);
 
+  // ==========================================================
+  // 🔥 [핵심 수정] 웹소켓 주소를 하드코딩(localhost)에서 환경변수로 동적 변경!
+  // ==========================================================
   useEffect(() => {
-  if (!open) return;
+    if (!open) return;
 
-    const ws = new WebSocket("ws://localhost/chattingSock");
+    // Vite 환경변수에서 백엔드 기본 주소 가져오기 (없으면 fallback으로 localhost)
+    const backendUrl = import.meta.env.VITE_BASE_URL || "http://localhost:8080";
+    
+    // http:// -> ws:// 또는 https:// -> wss:// 로 정규식 변환 후 엔드포인트 결합
+    const wsUrl = backendUrl.replace(/^http/, 'ws') + "/chattingSock";
+    
+    console.log("웹소켓 연결 시도 중... 주소:", wsUrl);
+    
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
-    ws.onopen = () => console.log("WS 연결됨", ws.readyState);
+    ws.onopen = () => console.log("WS 연결됨 성공!", ws.readyState);
 
     ws.onmessage = (e) => {
       console.log("WS recv raw:", e.data);  
       const msg = JSON.parse(e.data);
 
       const normalized = {
-        messageId:  msg.messageId ?? crypto.randomUUID?.() ?? Date.now(),  // 임시 key
+        messageId:  msg.messageId ?? crypto.randomUUID?.() ?? Date.now(),  
         roomId: msg.roomId,
         content: msg.content,
         senderEmpNo: String(msg.senderEmpNo),
@@ -197,28 +208,22 @@ export default function MessengerModal({
         setMessages((prev) => [...prev, normalized]);
       }
     };
-    ws.onerror = (e) => console.log("WS 에러", e);
+    ws.onerror = (e) => console.log("WS 에러 발생:", e);
     ws.onclose = () => console.log("WS 종료", ws.readyState);
 
-    return  () => {
-    // open이 false로 바뀔 때만 닫히게
-    ws.close();
-    wsRef.current = null;
-  };
+    return () => {
+      ws.close();
+      wsRef.current = null;
+    };
   }, [open]);
 
-  const activeRoomRef = useRef(null);
-
-  useEffect(() => {
-    activeRoomRef.current = activeRoomId;
-  }, [activeRoomId]);
-
-  const sendMessage =async()=>{
+  const sendMessage = async () => {
     if (!activeRoomId || !draft.trim()) return;
 
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       console.log("WS 아직 OPEN 아님:", ws?.readyState);
+      alert("서버와 연결이 끊어졌습니다. 창을 닫았다가 다시 열어주세요.");
       return;
     }
 
@@ -228,13 +233,11 @@ export default function MessengerModal({
       content: draft,
     };
 
-    console.log("WS send:", payload);
+    console.log("WS send payload:", payload);
     ws.send(JSON.stringify(payload));
 
     setDraft("");
   };
-
-
 
   const filteredRooms = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -242,28 +245,6 @@ export default function MessengerModal({
     return rooms.filter((r) => (r.title ?? "").toLowerCase().includes(q));
   }, [rooms, query]);
 
-  // const sendMessage = () => {
-  //   if (!activeRoomId) return;
-  //   const text = draft.trim();
-  //   if (!text) return;
-
-  //   setRooms((prev) =>
-  //     prev.map((r) => {
-  //       if (r.roomId !== activeRoomId) return r;
-  //       const now = Date.now();
-  //       return {
-  //         ...r,
-  //         lastMessage: text,
-  //         updatedAt: now,
-  //         messages: [...(r.messages ?? []), { id: now, mine: true, text, at: now }],
-  //       };
-  //     }).sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
-  //   );
-
-  //   setDraft("");
-  // };
-
-  // open이 false면 렌더 안 함
   if (!open) return null;
 
   return (
@@ -314,7 +295,7 @@ export default function MessengerModal({
                 </button>
               </div>
 
-              {/* 검색(대화목록에서만 의미 있어도 됨) */}
+              {/* 검색 */}
               <div className="mt-3 flex items-center gap-2 rounded-xl border border-black/10 bg-white px-3 py-2">
                 <Search size={16} className="text-black/40" />
                 <input
@@ -363,7 +344,6 @@ export default function MessengerModal({
                 </div>
               ) : (
                 <div className="rounded-xl border border-black/10 bg-white p-2">
-                  {/* ✅ ActiveOrg 쪽에서 onEmployeeClick 받아서 호출해주면 됨 */}
                   <ActiveOrg onEmployeeClick={startDmWith} />
                 </div>
               )}
@@ -390,11 +370,10 @@ export default function MessengerModal({
                     <div className="font-semibold leading-tight">{activeRoom.title}</div>
                     <div className="text-xs text-black/45 leading-tight">
                       사번: {activeRoom.peerEmpNo}
-                      {/* 나중에 부서/직급 들어오면 "· 부서 · 직급" 형태로 붙이기 */}
                     </div>
                   </div>
                             
-                  {/* 액션 버튼(나중 기능용 자리) */}
+                  {/* 액션 버튼 */}
                   <div className="ml-auto flex items-center gap-1">
                     <button type="button" className="h-9 w-9 rounded-lg hover:bg-black/5" title="채팅 내 검색(예정)">
                       <Search size={18} className="text-black/50" />
@@ -405,7 +384,6 @@ export default function MessengerModal({
                   </div>
                 </div>
 
-
                 {/* 메시지 리스트 */}
                 <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 bg-black/[0.02]">
                   {(messages ?? []).length === 0 ? (
@@ -415,8 +393,9 @@ export default function MessengerModal({
                   ) : (
                     messages.map((m, idx) => {
                       const isMine = String(m.senderEmpNo) === myEmpNo;
-                      const createdAt = new Date(m.sentAt ?? m.createdAt); // 둘 중 하나로 통일
-                      const showUnread1 = isMine && createdAt > lastReadAt;
+                      const createdAt = new Date(m.sentAt ?? m.createdAt); 
+                      // const showUnread1 = isMine && createdAt > lastReadAt;
+                      
                       return(
                         <div
                           key={m.messageId ?? `${m.senderEmpNo}-${m.sentAt}-${idx}`}
@@ -431,18 +410,11 @@ export default function MessengerModal({
                             >
                               {m.content}
                             </div>
-                            
-                            {/*  1을 말풍선 '바깥'에 고정 */}
-                            {/* {isMine && showUnread1 && (
-                              <span className="absolute -left-3 bottom-0 text-[11px] font-semibold text-black/50">
-                                1
-                              </span>
-                            )} */}
                           </div>
                         </div>
-                    );
-                  })
-                )}
+                      );
+                    })
+                  )}
                   <div ref={bottomRef} />
                 </div>
 

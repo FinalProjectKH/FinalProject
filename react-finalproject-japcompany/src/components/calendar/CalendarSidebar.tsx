@@ -281,8 +281,7 @@ export default function CalendarSidebar({
 
   // 🔥 공휴일 가져오기 함수 수정
   const handleSyncHolidays = () => {
-    // 🔥 권한 1로 수정됨
-    if(authLevel !== 1){
+    if(Number(authLevel) !== 3){
       alert("관리자만 실행할 수 있습니다.");
       return; // 권한 없으면 여기서 함수 종료!
     }
@@ -321,9 +320,10 @@ export default function CalendarSidebar({
 
   
 
-    return (
-        // 🔥 [수정] pb-40 추가: 아래에 여유 공간을 줘서 팝업이 잘리지 않고 스크롤 가능하게 함
-    <aside className="w-64 border-r border-gray-200 p-4 flex flex-col bg-white overflow-y-auto h-full">
+return (
+    // 🔥 1. aside에 p-4와 overflow-y-auto를 다시 넣어서 사이드바 전체가 스크롤 되게 만듭니다.
+    <aside className="w-64 border-r border-gray-200 p-4 flex flex-col bg-white overflow-y-auto h-full relative pb-10">
+      
       <h1 
         className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors"
         onClick={() => window.location.reload()}
@@ -339,23 +339,20 @@ export default function CalendarSidebar({
         <SidebarGroup title="전사 캘린더" GroupId="3" items={calendars.filter(c => String(c.category) === '3')} {...groupProps} />
       </div>
 
-      {authLevel === 3 && (
-        <div className="mt-auto pt-4 border-t border-gray-200">
+      {/* 🔥 2. 문제의 mt-auto 싹 빼버리고, 전사 캘린더 바로 밑에 착! 붙였습니다. */}
+      {Number(authLevel) === 3 && (
+        <div className="mt-6 pt-4 border-t border-gray-200">
             <button 
                 onClick={handleSyncHolidays}
-                className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded flex items-center justify-center gap-2 transition-colors shadow-sm"
             >
                 🔄 공휴일 데이터 가져오기
             </button>
-            <p className="text-[10px] text-gray-400 text-center mt-1">
+            <p className="text-[10px] text-gray-400 text-center mt-2">
                 *관리자(Lv.3) 전용 기능
             </p>
-            <p className="text-[10px] text-gray-400 text-center mt-1">
-                3년 뒤 데이터는 가져오지 못합니다 !!
-            </p>
         </div>
-    )}
-
+      )}
 
     </aside>
   );

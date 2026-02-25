@@ -53,7 +53,6 @@ public class CalendarServiceImpl implements CalendarService {
                 .location(dto.getCalLocation())
                 .calCategory(categoryEntity)
                 
-                // 🔥🔥🔥 [수정] 이 부분이 빠져서 에러가 났습니다! 다시 추가!
                 .typeId(categoryEntity.getType()) 
                 
                 .alldayYn(dto.getAlldayYn())
@@ -112,7 +111,6 @@ public class CalendarServiceImpl implements CalendarService {
                  
                  entity.setCalCategory(newCategory);
                  
-                 // 🔥🔥🔥 [수정] 카테고리가 바뀌면 typeId(일정 타입)도 같이 바꿔줘야 데이터가 안 꼬입니다.
                  entity.setTypeId(newCategory.getType()); 
             }
         }
@@ -143,7 +141,8 @@ public class CalendarServiceImpl implements CalendarService {
     // 전사 캘린더 권한 체크
     // =========================================================
     private void checkCompanyCalendarPermission(String empNo) {
-        LoginMemberDTO emp = employeeMapper.login(empNo);
+        // 🔥 [수정 완료] login 대신 새로 만든 findByEmpNo 메서드 호출!
+        LoginMemberDTO emp = employeeMapper.findByEmpNo(empNo);
         
         if (emp == null) {
             throw new IllegalArgumentException("사용자 정보가 없습니다.");
@@ -233,7 +232,7 @@ public class CalendarServiceImpl implements CalendarService {
                             .type("1")               
                             .deptCode(null)          
                             .build();
-                    
+                
                     CalendarCategoryEntity saved = categoryRepository.save(newCat);
                     return String.valueOf(saved.getId());
                 });
