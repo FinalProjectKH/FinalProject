@@ -36,83 +36,84 @@ const AttendanceSummaryCard = ({ onTodayChange }) => {
 
           if (Array.isArray(data)) {
 
-////////////////////////////////////////////////////////////////세현
+            // 🔥 [수정 1] KST(한국 시간) 기준으로 정확한 오늘 날짜 구하기
+            const getKstToday = () => {
+              const now = new Date();
+              const utc = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+              const kst = new Date(utc + (9 * 60 * 60 * 1000));
+              
+              const year = kst.getFullYear();
+              const month = String(kst.getMonth() + 1).padStart(2, "0");
+              const day = String(kst.getDate()).padStart(2, "0");
+              
+              return `${year}-${month}-${day}`;
+            };
 
-const todayStr = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+            const todayStr = getKstToday();
 
-// 백엔드에 날짜 필드명이 workDate / date 등 뭐든 있을 수 있어서 안전하게 처리
-const todayRecord =
-  data.find(r => String(r.workDate || r.date || "").startsWith(todayStr)) ||
-  data.find(r => String(r.startTime || "").startsWith(todayStr));
+            const todayRecord =
+              data.find(r => String(r.workDate || r.date || "").startsWith(todayStr)) ||
+              data.find(r => String(r.startTime || "").startsWith(todayStr));
 
-const toHHMMSS = (isoLike) => {
-  if (!isoLike) return null;
-  // "2026-02-22T08:59:23.000" 같은 문자열 가정
-  const t = isoLike.split("T")[1];
-  if (!t) return null;
-  return t.split(".")[0]; // "08:59:23"
-};
+            const toHHMMSS = (isoLike) => {
+              if (!isoLike) return null;
+              const t = isoLike.split("T")[1];
+              if (!t) return null;
+              return t.split(".")[0];
+            };
 
-const minutesToHHMMSS = (mins) => {
-  const totalSec = Math.max(0, Math.floor(Number(mins || 0) * 60));
-  const hh = String(Math.floor(totalSec / 3600)).padStart(2, "0");
-  const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
-  const ss = String(totalSec % 60).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
-};
+            const minutesToHHMMSS = (mins) => {
+              const totalSec = Math.max(0, Math.floor(Number(mins || 0) * 60));
+              const hh = String(Math.floor(totalSec / 3600)).padStart(2, "0");
+              const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
+              const ss = String(totalSec % 60).padStart(2, "0");
+              return `${hh}:${mm}:${ss}`;
+            };
 
-// 오늘 표시용 데이터 만들기
-if (typeof onTodayChange === "function") {
-  if (!todayRecord) {
-    onTodayChange(null);
-  } else {
-    const startText = toHHMMSS(todayRecord.startTime);
+            if (typeof onTodayChange === "function") {
+              if (!todayRecord) {
+                onTodayChange(null);
+              } else {
+                const startText = toHHMMSS(todayRecord.startTime);
+                const workedText =
+                  todayRecord.workMinutes != null
+                    ? minutesToHHMMSS(todayRecord.workMinutes)
+                    : null;
 
-    // workMinutes 있으면 그걸 최우선으로 사용(가장 정확)
-    const workedText =
-      todayRecord.workMinutes != null
-        ? minutesToHHMMSS(todayRecord.workMinutes)
-        : null;
-
-    // endTime이 있으면 "오늘 근무"로, 없으면 "출근 시간"으로 표시하도록 정보 전달
-    onTodayChange({
-      startText,
-      workedText,
-      hasEnd: Boolean(todayRecord.endTime),
-    });
-  }
-}
-
-////////////////////////////////////////////////////////////////세현
+                onTodayChange({
+                  startText,
+                  workedText,
+                  hasEnd: Boolean(todayRecord.endTime),
+                });
+              }
+            }
 
             let totalMinutes = 0;
             let workedDays = 0;
 
+            // 🔥 [수정 2] 퇴근 전(근무 중)일 때 시간 뻥튀기 방지 완벽 적용!
             data.forEach(record => {
-              // 백엔드 workMinutes 우선 사용
               const minutes = Number(record.workMinutes || 0);
 
               if (minutes > 0) {
+                // 이미 백엔드에서 정산된 근무 시간이 있으면 그대로 사용 (퇴근 완료)
                 totalMinutes += minutes;
                 workedDays++;
-              } else if (record.startTime) {
-                // 백업 로직
-                const start = new Date(record.startTime.replace('T', ' ').split('.')[0]);
-                const end = record.endTime
-                  ? new Date(record.endTime.replace('T', ' ').split('.')[0])
-                  : new Date(new Date(start).setHours(18, 0, 0, 0));
-
-                const diff = (end.getTime() - start.getTime()) / (1000 * 60);
-                const finalDiff = diff < 0 ? diff + 540 : diff;
-
-                if (finalDiff > 0) {
-                  totalMinutes += finalDiff;
+              } else if (record.startTime && !record.endTime) {
+                // 출근은 했는데 퇴근을 안 한 상태 (현재 근무 중!)
+                const start = new Date(record.startTime.replace('T', ' '));
+                const now = new Date(); 
+                
+                // 지금까지 일한 시간(분) 계산
+                const diffMins = Math.floor((now.getTime() - start.getTime()) / (1000 * 60));
+                
+                if (diffMins > 0) {
+                  totalMinutes += diffMins;
                   workedDays++;
                 }
               }
             });
 
-            // 계산 로직은 if문 안에서 딱 한 번만!
             const h = Math.floor(totalMinutes / 60);
             const m = Math.floor(totalMinutes % 60);
             const targetMin = 40 * 60; 
@@ -139,7 +140,6 @@ if (typeof onTodayChange === "function") {
           newSummary.remainingLeave = leaveData;
         }
 
-        // 💡 모든 계산이 끝난 후 최종 업데이트
         setSummary(newSummary);
 
       } catch (error) {
@@ -178,7 +178,6 @@ if (typeof onTodayChange === "function") {
   );
 };
 
-/* 하단 서브 컴포넌트(ProgressBar, StatBlock)는 기존과 동일하게 유지해줘 */
 const ProgressBar = ({ value = 0, marker = 0.8 }) => {
   const v = Math.max(0, Math.min(1, value));
   return (
