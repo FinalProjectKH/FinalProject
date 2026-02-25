@@ -14,7 +14,6 @@ export default function MessengerModal({
   const loginMember = useAuthStore((state) => state.user);
   const myEmpNo = String(loginMember.empNo);
   
-  // 🔥 [수정] 훅(Hook)은 무조건 최상단에 있어야 안전합니다! activeRoomRef를 위로 끌어올림
   const wsRef = useRef(null);
   const activeRoomRef = useRef(null);
   const bottomRef = useRef(null);
@@ -34,7 +33,7 @@ export default function MessengerModal({
   //메시지
   const [messages, setMessages] = useState([]);
   
-  //메시지 안잃음
+  //메시지 안읽음
   const unreadCount = useAuthStore((s) => s.unreadCount);
   const fetchUnreadCount = useAuthStore((s) => s.fetchUnreadCount);
 
@@ -169,16 +168,15 @@ export default function MessengerModal({
   }, [fetchMessages]);
 
   // ==========================================================
-  // 🔥 [핵심 수정] 웹소켓 주소를 하드코딩(localhost)에서 환경변수로 동적 변경!
+  // 🔥 [핵심 수정] 웹소켓 연결 시 내 사번(empNo)을 주소 파라미터로 넘겨줌!
   // ==========================================================
   useEffect(() => {
     if (!open) return;
 
-    // Vite 환경변수에서 백엔드 기본 주소 가져오기 (없으면 fallback으로 localhost)
     const backendUrl = import.meta.env.VITE_BASE_URL || "http://localhost:8080";
     
-    // http:// -> ws:// 또는 https:// -> wss:// 로 정규식 변환 후 엔드포인트 결합
-    const wsUrl = backendUrl.replace(/^http/, 'ws') + "/chattingSock";
+    // 주소 끝에 ?empNo=사번 을 찰싹 붙여서 전송!
+    const wsUrl = backendUrl.replace(/^http/, 'ws') + `/chattingSock?empNo=${myEmpNo}`;
     
     console.log("웹소켓 연결 시도 중... 주소:", wsUrl);
     
@@ -199,9 +197,6 @@ export default function MessengerModal({
         sentAt: msg.sentAt ?? new Date().toISOString(),
       };
 
-      console.log("현재 activeRoomId(ref):", activeRoomRef.current);
-      console.log("수신 roomId:", normalized.roomId);
-
       if (!activeRoomRef.current) return;
 
       if (Number(normalized.roomId) === Number(activeRoomRef.current)) {
@@ -215,7 +210,7 @@ export default function MessengerModal({
       ws.close();
       wsRef.current = null;
     };
-  }, [open]);
+  }, [open, myEmpNo]);
 
   const sendMessage = async () => {
     if (!activeRoomId || !draft.trim()) return;
@@ -360,20 +355,15 @@ export default function MessengerModal({
               <>
                 {/* 채팅 헤더 */}
                 <div className="h-16 px-4 flex items-center gap-3 border-b border-black/10 bg-white">
-                  {/* 아바타(임시: 이니셜) */}
                   <div className="h-10 w-10 rounded-full bg-black/10 grid place-items-center font-semibold">
                     {(activeRoom.title ?? "U").slice(0, 1)}
                   </div>
-                            
-                  {/* 상대 정보 */}
                   <div className="min-w-0">
                     <div className="font-semibold leading-tight">{activeRoom.title}</div>
                     <div className="text-xs text-black/45 leading-tight">
                       사번: {activeRoom.peerEmpNo}
                     </div>
                   </div>
-                            
-                  {/* 액션 버튼 */}
                   <div className="ml-auto flex items-center gap-1">
                     <button type="button" className="h-9 w-9 rounded-lg hover:bg-black/5" title="채팅 내 검색(예정)">
                       <Search size={18} className="text-black/50" />
@@ -393,8 +383,6 @@ export default function MessengerModal({
                   ) : (
                     messages.map((m, idx) => {
                       const isMine = String(m.senderEmpNo) === myEmpNo;
-                      const createdAt = new Date(m.sentAt ?? m.createdAt); 
-                      // const showUnread1 = isMine && createdAt > lastReadAt;
                       
                       return(
                         <div
@@ -402,7 +390,6 @@ export default function MessengerModal({
                           className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                         >
                           <div className="relative max-w-[70%]">
-                            {/* 말풍선 */}
                             <div
                               className={`rounded-2xl px-3 py-2 text-sm ${
                                 isMine ? "bg-black text-white" : "bg-white border border-black/10"
