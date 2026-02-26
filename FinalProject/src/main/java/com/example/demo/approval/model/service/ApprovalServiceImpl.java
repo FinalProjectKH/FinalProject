@@ -37,6 +37,7 @@ public class ApprovalServiceImpl implements ApprovalService {
 	private final ApprovalMapper mapper;
 	private final CalendarService calendarService;
 
+    // config.properties에서 설정한 경로 (/home/ec2-user/japFiles/upload/)
     @Value("${file.upload-dir}")
     private String uploadDir; 
 	
@@ -49,11 +50,18 @@ public class ApprovalServiceImpl implements ApprovalService {
         int result = 0;
         String docNo = dto.getDocNo();
 
-        // [1] 파일 저장 로직
+        // ========================================================
+        // 🔥 [수정 1] 파일 저장 로직 (윈도우 하드코딩 경로 완벽 제거)
+        // ========================================================
         if (files != null && !files.isEmpty()) {
-            String projectPath = System.getProperty("user.dir") + "\\src\\main\\resources\\static\\uploads\\approval\\";
+            // uploadDir 경로 끝에 슬래시(/)가 없으면 붙여주는 안전 장치
+            String basePath = uploadDir.endsWith("/") ? uploadDir : uploadDir + "/";
+            
+            // 최종 저장 폴더: /home/ec2-user/japFiles/upload/approval/
+            String projectPath = basePath + "approval/";
             File saveFolder = new File(projectPath);
 
+            // 폴더가 없으면 냅다 만들어줌!
             if (!saveFolder.exists()) {
                 saveFolder.mkdirs();
             }
@@ -64,18 +72,21 @@ public class ApprovalServiceImpl implements ApprovalService {
                 if (!file.isEmpty()) {
                     String originalFileName = file.getOriginalFilename();
                     String renameFileName = UUID.randomUUID().toString() + "_" + originalFileName;
+                    
+                    // 리눅스 경로로 안전하게 파일 안착!
                     file.transferTo(new File(projectPath + renameFileName));
                     renameFileNames.add(renameFileName);
                 }
             }
 
+            // DB에는 파일명만 저장 (프론트에서 /uploads/approval/ + 파일명 형태로 조합해서 부름!)
             if (!renameFileNames.isEmpty()) {
                 dto.setApprovalFile(String.join(",", renameFileNames));
             }
         }
         
         // ========================================================
-        // 🛡️ [수정] 휴가 신청 시 '잔여 연차' 확인 로직
+        // 🛡️ 휴가 신청 시 '잔여 연차' 확인 로직
         // ========================================================
         boolean hasDates = dto.getStartDate() != null && !dto.getStartDate().isEmpty() 
                         && dto.getEndDate() != null && !dto.getEndDate().isEmpty();
@@ -314,13 +325,13 @@ public class ApprovalServiceImpl implements ApprovalService {
                             .calTitle("[휴가] " + docInfo.getEmpName() + " - " + vacationInfo.getVacationType()) 
                             .calContent("전자결재 문서번호: " + docNo) 
                             .calStartDt(LocalDateTime.parse(startStr, formatter)) 
-                            .calEndDt(LocalDateTime.parse(endStr, formatter))      
+                            .calEndDt(LocalDateTime.parse(endStr, formatter))     
                             .calColor("#FF6B6B")  
                             .calLocation("휴가")     
                             .empNo(docInfo.getEmpNo()) 
                             .typeId(vacationCategoryId) 
                             .alldayYn("Y")        
-                            .openYn("Y")           
+                            .openYn("Y")            
                             .build();
 
                     calendarService.createEvent(calendarEvent);
@@ -407,7 +418,7 @@ public class ApprovalServiceImpl implements ApprovalService {
         return count;
     }
 
-    // 🔥 [추가] 문서 삭제
+    // 문서 삭제
     @Override
     public void deleteApproval(String docNo) {
         // 자식 먼저 삭제
@@ -444,37 +455,29 @@ public class ApprovalServiceImpl implements ApprovalService {
         return successCount; 
     }
 
-
     // 갯수 새기
-
 	@Override
 	public int getWaitListCount(String empNo) {
-		// TODO Auto-generated method stub
 		return mapper.getWaitListCount(empNo);
 	}
 
 	@Override
 	public int getUpcomingListCount(String empNo) {
-		// TODO Auto-generated method stub
 		return mapper.getUpcomingListCount(empNo);
 	}
 
 	@Override
 	public int getMyDraftListCount(String empNo) {
-		// TODO Auto-generated method stub
 		return mapper.getMyDraftListCount(empNo);
 	}
 
 	@Override
 	public int getTempListCount(String empNo) {
-		// TODO Auto-generated method stub
 		return mapper.getTempListCount(empNo);
 	}
 
 	@Override
 	public int getMyApprovedListCount(String empNo) {
-		// TODO Auto-generated method stub
 		return mapper.getMyApprovedListCount(empNo);
 	}
-
 }
