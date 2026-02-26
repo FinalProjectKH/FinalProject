@@ -12,7 +12,6 @@ const PRESET_COLORS = [
   "#607d8b", "#333333"             // 회색, 검정
 ];
 
-
 interface SidebarGroupProps {
   title: string;
   GroupId: string;
@@ -23,7 +22,7 @@ interface SidebarGroupProps {
   // 상태 관리 함수들
   onToggle: (id: string) => void;
   onDeleteCategory: (id: string) => void;
-  onRenameCategory: (id: string, newName: string) => void; // 🔥 [추가] 이름 수정 함수
+  onRenameCategory: (id: string, newName: string) => void; 
   
   // 편집(Add) 관련
   addingSection: string | null;
@@ -54,7 +53,6 @@ const SidebarGroup = ({
   const hasPermission = authLevel >= parseInt(GroupId);
   const validItems = items.filter(item => item.id && item.name);
 
-  // 🔥 [추가] 이름 입력창에서 엔터 누르면 저장
   const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, id: string) => {
     if (e.key === 'Enter') {
         const target = e.target as HTMLInputElement;
@@ -62,8 +60,6 @@ const SidebarGroup = ({
         target.blur();
     }
   };
-
-
 
   return (
     <div className="mb-4 select-none relative">
@@ -99,14 +95,12 @@ const SidebarGroup = ({
                 <li key={strId} className="flex items-center justify-between py-1.5 px-1 hover:bg-gray-50 rounded group/item relative">
                   {isEditing ? (
                     <>
-                      {/* 🔥 [수정] 편집 모드 시 input으로 변경 */}
                       <input 
                         defaultValue={cal.name}
-                        // 🔥 [수정] 밑줄(border-b) 삭제 -> 깔끔한 둥근 상자 스타일로 변경
                         className="text-sm text-gray-700 border border-gray-200 rounded px-2 py-0.5 focus:border-blue-500 outline-none bg-white w-full mr-2 shadow-sm"
                         onKeyDown={(e) => handleNameKeyDown(e, strId)}
                         onBlur={(e) => onRenameCategory(strId, e.target.value)}
-                        autoFocus // 편의상 autoFocus 추가 추천
+                        autoFocus 
                       />
                       <button onClick={() => onDeleteCategory(strId)} className="text-gray-400 hover:text-red-500 shrink-0">❌</button>
                     </>
@@ -119,7 +113,6 @@ const SidebarGroup = ({
                         <span className={`text-sm truncate ${isChecked ? 'text-gray-700' : 'text-gray-400'}`}>{cal.name}</span>
                       </div>
                       
-                      {/* 색상 버튼 */}
                       <div className="relative shrink-0">
                           <button
                               className="block w-3 h-3 rounded-full ring-1 ring-gray-200 hover:ring-gray-400"
@@ -133,7 +126,6 @@ const SidebarGroup = ({
                               disabled={!hasPermission}
                           />
 
-                          {/* 색상 수정 팝업 */}
                           {isPickerOpen && (
                               <div className="absolute right-0 top-6 z-50 bg-white border border-gray-200 shadow-xl rounded-lg p-3 flex flex-col gap-3"
                                    style={{ width: '220px' }}
@@ -174,12 +166,10 @@ const SidebarGroup = ({
             })}
           </ul>
 
-          {/* 캘린더 추가 영역 */}
           {!isEditing && hasPermission && (
             addingSection === GroupId ? (
               <div className="mt-2 bg-gray-50 p-2 rounded border border-gray-200 flex flex-col gap-2 relative">
                 <div className="flex gap-2 items-center">
-                  
                   <div className="relative">
                     <button 
                       className="w-5 h-5 rounded-full border border-gray-300 shadow-sm"
@@ -242,7 +232,7 @@ interface CalendarSidebarProps {
   onToggle: (id: string) => void;
   onAddCategory: (data: { name: string; color: string; category: string }) => void;
   onDeleteCategory: (id: string) => void;
-  onRenameCategory: (id: string, newName: string) => void; // 🔥 [추가]
+  onRenameCategory: (id: string, newName: string) => void;
   onColorChange: (id: string, color: string) => void;
   authLevel: number;
 }
@@ -263,6 +253,9 @@ export default function CalendarSidebar({
   const [newCalendar, setNewCalendar] = useState({ name: '', color: '#3b82f6' });
   const [colorPickerTarget, setColorPickerTarget] = useState<string | null>(null);
   const [tempColor, setTempColor] = useState<string>('#000000');
+
+  // 🔥 Vite 환경 변수에서 백엔드 기본 주소 가져오기
+  const API_URL = import.meta.env.VITE_BASE_URL;
 
   // 핸들러
   const handleAddClick = () => {
@@ -286,11 +279,11 @@ export default function CalendarSidebar({
     }
   };
 
-    // 🔥 [추가] 공휴일 가져오기 함수 (관리자용)
+  // 🔥 공휴일 가져오기 함수 수정
   const handleSyncHolidays = () => {
-
-    if(authLevel !== 3){
+    if(Number(authLevel) !== 3){
       alert("관리자만 실행할 수 있습니다.");
+      return; // 권한 없으면 여기서 함수 종료!
     }
 
     const nextYear = new Date().getFullYear() + 1;
@@ -298,18 +291,20 @@ export default function CalendarSidebar({
 
     if (!inputYear) return; 
 
-    // 주의: Controller 주소와 똑같이 맞춰야 함
-    axios.post(`/api/calendar/holidays/sync?year=${inputYear}`)
+    // 🔥 API 주소에 API_URL을 붙이고 세션 쿠키(withCredentials) 전달 설정 추가
+    // post의 두 번째 인자는 body 데이터({})이고, 세 번째 인자가 설정(config)입니다.
+    axios.post(`${API_URL}/api/calendar/holidays/sync?year=${inputYear}`, {}, {
+      withCredentials: true 
+    })
       .then((res) => {
         alert(res.data); 
-        window.location.reload(); // 화면 새로고침해서 빨간 날 표시
+        window.location.reload(); 
       })
       .catch((err) => {
         console.error(err);
         alert("공휴일 가져오기 실패! (콘솔 확인)");
       });
   };
-
   // 공통 Props 묶음
   const groupProps = {
     authLevel,
@@ -325,9 +320,10 @@ export default function CalendarSidebar({
 
   
 
-    return (
-        // 🔥 [수정] pb-40 추가: 아래에 여유 공간을 줘서 팝업이 잘리지 않고 스크롤 가능하게 함
-    <aside className="w-64 border-r border-gray-200 p-4 flex flex-col bg-white overflow-y-auto h-full">
+return (
+    // 🔥 1. aside에 p-4와 overflow-y-auto를 다시 넣어서 사이드바 전체가 스크롤 되게 만듭니다.
+    <aside className="w-64 border-r border-gray-200 p-4 flex flex-col bg-white overflow-y-auto h-full relative pb-10">
+      
       <h1 
         className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors"
         onClick={() => window.location.reload()}
@@ -343,23 +339,20 @@ export default function CalendarSidebar({
         <SidebarGroup title="전사 캘린더" GroupId="3" items={calendars.filter(c => String(c.category) === '3')} {...groupProps} />
       </div>
 
-      {authLevel === 3 && (
-        <div className="mt-auto pt-4 border-t border-gray-200">
+      {/* 🔥 2. 문제의 mt-auto 싹 빼버리고, 전사 캘린더 바로 밑에 착! 붙였습니다. */}
+      {Number(authLevel) === 3 && (
+        <div className="mt-6 pt-4 border-t border-gray-200">
             <button 
                 onClick={handleSyncHolidays}
-                className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded flex items-center justify-center gap-2 transition-colors shadow-sm"
             >
                 🔄 공휴일 데이터 가져오기
             </button>
-            <p className="text-[10px] text-gray-400 text-center mt-1">
+            <p className="text-[10px] text-gray-400 text-center mt-2">
                 *관리자(Lv.3) 전용 기능
             </p>
-            <p className="text-[10px] text-gray-400 text-center mt-1">
-                3년 뒤 데이터는 가져오지 못합니다 !!
-            </p>
         </div>
-    )}
-
+      )}
 
     </aside>
   );

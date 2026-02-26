@@ -20,39 +20,31 @@ export default function ApprovalDetail() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
-  // 1. 내 정보 로드 (로그인한 사번 가져오기)
+  // 🔥 VITE 환경 변수 가져오기
+  const API_URL = import.meta.env.VITE_BASE_URL;
+
+  // 1. 내 정보 로드
   useEffect(() => {
-    fetch('/employee/myInfo')
+    fetch(`${API_URL}/employee/myInfo`, { credentials: 'include' })
       .then(res => res.json())
       .then(member => {
-          console.log("내 사번 로드 완료:", member.empNo);
           setMyEmpNo(member.empNo);
       })
       .catch(err => console.error(err));
   }, []);
 
-  // 2. 데이터 로드 (🔥 Map 구조 대응 수정)
+  // 2. 데이터 로드
   useEffect(() => {
-    // 1) 문서번호가 없거나, 아직 내 사번(myEmpNo)을 못 가져왔으면 요청하지 않고 대기
     if (!docNo || !myEmpNo) return; 
 
-    // 2) URL 뒤에 ?empNo=${myEmpNo} 추가
-    fetch(`/api/approval/view/${docNo}?empNo=${myEmpNo}`) // 🔥 /view로 변경 (권한체크용)
+    fetch(`${API_URL}/api/approval/view/${docNo}?empNo=${myEmpNo}`, { credentials: 'include' }) 
       .then(res => {
-        // 400, 403 에러 처리
-        if (res.status === 403) {
-            throw new Error("조회 권한이 없습니다.");
-        }
-        if (res.status === 400) {
-            throw new Error("잘못된 요청입니다. (사번 누락)");
-        }
+        if (res.status === 403) throw new Error("조회 권한이 없습니다.");
+        if (res.status === 400) throw new Error("잘못된 요청입니다. (사번 누락)");
         if (!res.ok) throw new Error("문서를 찾을 수 없습니다.");
         return res.json();
       })
       .then(result => {
-        // 🔥 [핵심] 백엔드에서 Map으로 보냈으므로, 여기서도 구조에 맞게 받아야 함
-        // result = { approval: {...}, lines: [...], vacation: {...}, ... }
-        console.log("백엔드 응답 데이터:", result);
         setData(result); 
         setLoading(false);
       })
@@ -62,9 +54,8 @@ export default function ApprovalDetail() {
       });
   }, [docNo, myEmpNo, navigate]); 
 
-  // (1) 폼 데이터 가공 (🔥 방어 코드 추가)
+  // 폼 데이터 가공
   const formData = useMemo(() => {
-    // data가 없거나 approval 정보가 아직 없으면 null 리턴 (에러 방지)
     if (!data || !data.approval) return null;
 
     const { approval, lines, vacation, expense, expenseDetails } = data;
@@ -77,8 +68,8 @@ export default function ApprovalDetail() {
         approvalLineList: lines ? lines.map(line => ({
             approverNo: line.approverNo,
             name: line.empName,
-            rank: line.deptName, // 직급 정보가 deptName에 들어오는 경우
-            jobName: line.jobName, // 직급이 jobName에 있다면 이거 사용
+            rank: line.deptName, 
+            jobName: line.jobName, 
             appLineStatus: line.appLineStatus,
             appLineOrder: line.appLineOrder
         })) : [],
@@ -92,7 +83,7 @@ export default function ApprovalDetail() {
     };
   }, [data]);
 
-  // (2) 내 차례 판별 로직 (🔥 방어 코드 추가)
+  // 내 차례 판별 로직
   const isMyTurn = useMemo(() => {
       if (!data || !myEmpNo || !data.lines) return false;
       const { lines } = data;
@@ -107,7 +98,7 @@ export default function ApprovalDetail() {
       return !hasPreviousWaiter;
   }, [data, myEmpNo]);
 
-  // (3) 회수 가능 여부 (🔥 방어 코드 추가)
+  // 회수 가능 여부
   const canRetract = useMemo(() => {
       if (!data || !myEmpNo || !data.approval || !data.lines) return false;
       const { approval, lines } = data;
@@ -119,14 +110,12 @@ export default function ApprovalDetail() {
              lines[0].appLineStatus === 'W';
   }, [data, myEmpNo]);
 
-  // (4) 임시저장 여부 (🔥 방어 코드 추가)
+  // 임시저장 여부
   const isMyTemp = useMemo(() => {
       if (!data || !myEmpNo || !data.approval) return false;
       return String(data.approval.empNo) === String(myEmpNo) && data.approval.tempSaveYn === 'Y';
   }, [data, myEmpNo]);
 
-
-  // 🔥 [핵심] 로딩 중이거나 데이터가 아직 없을 때 화면 렌더링 방어
   if (loading || !data || !data.approval) {
       return (
         <div className="flex justify-center items-center h-screen bg-gray-100">
@@ -137,39 +126,36 @@ export default function ApprovalDetail() {
       );
   }
 
-  const { approval } = data; // 이제 안전하게 꺼낼 수 있음
+  const { approval } = data; 
 
   // ---------------- 핸들러 함수들 ----------------
 
   const handleProcess = async (status, reason = null) => {
-    // 1. 반려 버튼 누름 -> 모달 열기
     if (status === 'R' && reason === null) {
-        setRejectReason(""); // 초기화
+        setRejectReason(""); 
         setShowRejectModal(true);
         return;
     }
 
-    // 2. 승인 또는 모달에서 '확인' 누름 -> 서버 전송
     const actionName = status === 'C' ? '승인' : '반려';
-    
-    // 승인일 때만 confirm 창 띄우기 (반려는 모달이 있으니까 생략)
     if (status === 'C' && !window.confirm(`정말 ${actionName} 하시겠습니까?`)) return;
 
     try {
-        const response = await fetch("/api/approval/process", {
+        const response = await fetch(`${API_URL}/api/approval/process`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: 'include', // 🔥 추가됨
             body: JSON.stringify({
                 docNo: docNo,
                 status: status,
                 empNo: myEmpNo,
-                rejectReason: reason // 반려 사유 포함
+                rejectReason: reason 
             }),
         });
 
         if (response.ok) {
             alert(`${actionName} 처리가 완료되었습니다.`);
-            setShowRejectModal(false); // 모달 닫기
+            setShowRejectModal(false); 
             navigate('/approval');
         } else {
             const msg = await response.text();
@@ -181,7 +167,6 @@ export default function ApprovalDetail() {
     }
   };
 
-  // 모달에서 [반려 확정] 눌렀을 때 실행할 함수
   const submitReject = () => {
       if (!rejectReason.trim()) {
           alert("반려 사유를 입력해주세요.");
@@ -194,13 +179,16 @@ export default function ApprovalDetail() {
     let formId = 'general';
     if (data.vacation) formId = 'vacation';
     if (data.expense) formId = 'expense';
-    navigate(`/approval/write/${formId}?docNo=${docNo}`); // URL 파라미터 방식으로 통일
+    navigate(`/approval/write/${formId}?docNo=${docNo}`); 
   };
 
   const handleDelete = async () => {
     if(!window.confirm("정말 삭제하시겠습니까? (삭제 후 복구할 수 없습니다)")) return;
     try {
-        const response = await fetch(`/api/approval/delete/${docNo}`, { method: "DELETE" });
+        const response = await fetch(`${API_URL}/api/approval/delete/${docNo}`, { 
+            method: "DELETE",
+            credentials: 'include' // 🔥 추가됨
+        });
         if (response.ok) {
             alert("삭제되었습니다.");
             navigate('/approval');
@@ -217,9 +205,10 @@ export default function ApprovalDetail() {
   const handleCancel = async () => {
     if(!window.confirm("결재 요청을 회수하시겠습니까?\n(문서는 임시저장 보관함으로 이동합니다.)")) return;
     try {
-      const response = await fetch("/api/approval/cancel", {
+      const response = await fetch(`${API_URL}/api/approval/cancel`, {
         method: "POST",
         headers: {"Content-Type" : "application/json"},
+        credentials: 'include', // 🔥 추가됨
         body: JSON.stringify({ docNo: docNo, empNo: myEmpNo }),
       });
 
@@ -237,12 +226,13 @@ export default function ApprovalDetail() {
   };
 
   const handleFileDownload = (fileName) => {
-    const fileUrl = `/uploads/approval/${fileName}`;
+    // 🔥 백엔드 서버 주소에서 파일을 다운로드 받도록 수정됨!
+    const fileUrl = `${API_URL}/uploads/approval/${fileName}`;
     window.open(fileUrl, '_blank');
   };
 
   const renderForm = () => {
-    if (!formData) return null; // 방어 코드
+    if (!formData) return null; 
 
     const commonProps = {
       data: formData,
@@ -301,7 +291,7 @@ export default function ApprovalDetail() {
             </div>
         </div>
 
-      {/* ================= 반려 사유 표시 영역 (디자인 개선) ================= */}
+      {/* 반려 사유 표시 영역 */}
       {data && data.approval.approvalStatus === 'R' && (
         <div className="w-full max-w-[900px] mx-auto mb-8">
           <div className="bg-red-50 border-l-4 border-red-500 rounded-r-lg p-6 shadow-sm flex items-start gap-4">
@@ -354,7 +344,7 @@ export default function ApprovalDetail() {
 
       </div>
       
-      {/* ================= 반려 사유 입력 모달 ================= */}
+      {/* 반려 사유 입력 모달 */}
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-2xl w-[500px] p-6 border border-gray-200 animate-fadeIn">

@@ -7,6 +7,9 @@ export default function VacationForm({ data, onChange, approvalLines = [], login
   // 1. 상태 관리 (계산된 차감 일수 저장용)
   const [calculatedDays, setCalculatedDays] = useState(0.0);
 
+  // 🔥 VITE 환경 변수 가져오기
+  const API_URL = import.meta.env.VITE_BASE_URL;
+
   const today = new Date().toLocaleDateString('ko-KR', {
     year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short'
   });
@@ -32,23 +35,22 @@ export default function VacationForm({ data, onChange, approvalLines = [], login
     }
 
     try {
-      // 백엔드에 "이 날짜면 며칠 차감이야?" 라고 물어봄
-      const response = await axios.get('/api/approval/calculate-days', {
+      // 🔥 백엔드 주소 추가 및 axios용 쿠키 설정(withCredentials) 추가!
+      const response = await axios.get(`${API_URL}/api/approval/calculate-days`, {
         params: {
           start: data.startDate,
           end: data.endDate,
           type: data.vacationType
-        }
+        },
+        withCredentials: true 
       });
       setCalculatedDays(response.data); // 결과값 저장
       
-      // (선택) 부모에게 차감 일수 전달이 필요하다면 여기서 onChange를 호출해줄 수도 있음
-      // 하지만 지금 구조상 data에 totalUse 필드가 없다면 그냥 화면 표시용으로만 써도 됨.
     } catch (error) {
       console.error("일수 계산 실패:", error);
       setCalculatedDays(0);
     }
-  }, [data.startDate, data.endDate, data.vacationType]);
+  }, [data.startDate, data.endDate, data.vacationType, API_URL]);
 
   // =================================================================
   // 3. 🔥 [핵심 로직] 데이터 변경 감지 & 반차 자동 제어
@@ -206,7 +208,6 @@ export default function VacationForm({ data, onChange, approvalLines = [], login
               <select 
                   name="vacationType" 
                   value={data.vacationType || '연차'} 
-                  // 🔥 핸들러 교체 (반차 처리용)
                   onChange={handleTypeChange} 
                   disabled={readOnly} 
                   style={{ width: "100%", padding: "5px", border: "1px solid #ccc", borderRadius: "4px" }}
@@ -230,7 +231,6 @@ export default function VacationForm({ data, onChange, approvalLines = [], login
                     type="date" 
                     name="startDate" 
                     value={data.startDate || ''} 
-                    // 🔥 핸들러 교체 (반차 처리용)
                     onChange={handleStartDateChange} 
                     disabled={readOnly} 
                     style={{ padding: "3px", border: "1px solid #ccc" }} 
@@ -242,7 +242,6 @@ export default function VacationForm({ data, onChange, approvalLines = [], login
                     name="endDate" 
                     value={data.endDate || ''} 
                     onChange={onChange} 
-                    // 🔥 반차면 비활성화 (readOnly + 배경색)
                     disabled={readOnly || (data.vacationType && data.vacationType.includes('반차'))}
                     style={{ 
                         padding: "3px", 

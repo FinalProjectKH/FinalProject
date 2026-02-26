@@ -17,13 +17,17 @@ export default function ApprovalHome() {
 
   // 1. 데이터 로드 (내 정보 -> 홈 데이터)
   useEffect(() => {
-    fetch('/employee/myInfo')
+    // 🔥 Vite 환경 변수에서 백엔드 기본 주소 가져오기
+    const API_URL = import.meta.env.VITE_BASE_URL;
+
+    // 🔥 상대 경로 대신 전체 주소를 명시하고, 쿠키 전달을 위한 credentials 옵션 추가!
+    fetch(`${API_URL}/employee/myInfo`, { credentials: 'include' })
       .then(res => res.json())
       .then(member => {
         if (!member.empNo) return;
         
-        // 내 사번으로 홈 데이터 조회
-        return fetch(`/api/approval/home?empNo=${member.empNo}`);
+        // 내 사번으로 홈 데이터 조회 (여기도 동일하게 적용)
+        return fetch(`${API_URL}/api/approval/home?empNo=${member.empNo}`, { credentials: 'include' });
       })
       .then(res => res && res.json())
       .then(result => {
@@ -132,7 +136,6 @@ export default function ApprovalHome() {
         </div>
       </div>
 
-
       {/* 3. 하단 리스트 영역 (Grid Layout) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
@@ -170,7 +173,6 @@ export default function ApprovalHome() {
                 )}
             </div>
         </div>
-
 
         {/* 오른쪽: 내 기안 진행 리스트 (Top 5) */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full">
