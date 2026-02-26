@@ -201,7 +201,6 @@ export default function MessengerModal({
     ws.onclose = () => console.log("WS 종료", ws.readyState);
 
     return  () => {
-    // open이 false로 바뀔 때만 닫히게
     ws.close();
     wsRef.current = null;
   };
