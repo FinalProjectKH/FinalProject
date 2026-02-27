@@ -22,11 +22,11 @@ const Header = () => {
       <div className="flex-1 flex justify-center">
       <div className="glass w-[620px] rounded-full px-6 py-3 flex items-center gap-3">
 
-          <Search size={18} className="text-black/30" />
+          {/* <Search size={18} className="text-black/30" />
           <input
             placeholder="Search"
             className="w-full bg-transparent outline-none text-sm text-black/70 placeholder:text-black/35"
-          />
+          /> */}
         </div>
       </div>
 
@@ -56,13 +56,13 @@ const Header = () => {
         </button>
 
         {/* hamburger */}
-        <button className="w-12 h-12 rounded-full hover:bg-black/5 transition grid place-items-center">
-          <div className="space-y-1.5">
+        {/* <button className="w-12 h-12 rounded-full hover:bg-black/5 transition grid place-items-center"> */}
+          <div className="w-5 h-12 space-y-1.5">
+            {/* <div className="h-[2px] w-6 bg-black/55 rounded-full" />
             <div className="h-[2px] w-6 bg-black/55 rounded-full" />
-            <div className="h-[2px] w-6 bg-black/55 rounded-full" />
-            <div className="h-[2px] w-6 bg-black/55 rounded-full" />
+            <div className="h-[2px] w-6 bg-black/55 rounded-full" /> */}
           </div>
-        </button>
+        {/* </button> */}
       </div>
 
        <ProfileModal
