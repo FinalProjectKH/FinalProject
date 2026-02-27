@@ -331,8 +331,11 @@ export default function MessengerModal({
                           )}
                         </div>
                         <div className="mt-1 text-xs text-black/50 line-clamp-1">
-                          {r.lastMessage || "대화를 시작해보세요."}
+                          {r.lastMessage || " "}
                         </div>
+                        {/* <div className="mt-1 text-xs text-black/50 line-clamp-1">
+                          {r.lastMessage || "대화를 시작해보세요."}
+                        </div> */}
                       </button>
                     ))
                   )}

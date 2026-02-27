@@ -58,9 +58,9 @@ const EmployeeModal = ({ open, onClose, employee, onStartDm }) => {
 
           {/* actions */}
           <div className="flex gap-2 pt-2">
-            <button className="flex-1 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">
+            {/* <button className="flex-1 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">
               프로필 보기
-            </button>
+            </button> */}
             <button 
             className="flex-1 rounded-lg bg-[#D37545] text-white px-3 py-2 text-sm hover:opacity-90"
             onClick={()=>{
